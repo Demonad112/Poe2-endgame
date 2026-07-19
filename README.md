@@ -1,5 +1,12 @@
 # PoE2 Endgame Companion
 
+> This is an unofficial, fan-made project and is not affiliated with,
+> endorsed by, or sponsored by Grinding Gear Games. Path of Exile and
+> Path of Exile 2 are trademarks of Grinding Gear Games. All game content,
+> mechanic names, and terminology referenced here belong to their
+> respective owners; this repo only contains original code and
+> community-sourced strategy notes.
+
 A second-monitor companion app for Path of Exile 2's 0.5 "Return of the
 Ancients" endgame, built from a community Atlas Tree/Mechanics guide and a
 0.5.4b endgame strategy guide:
@@ -48,3 +55,14 @@ static export and publishes it via GitHub Pages.
 **One-time manual step:** in the repo's Settings → Pages, set "Build and
 deployment source" to **GitHub Actions** (this can't be done from the
 workflow file itself).
+
+## Privacy
+
+This app makes no network calls at runtime and has no backend, analytics,
+or tracking of any kind. All progress (checklist completion, Atlas
+allocation, quiz answers) is stored only in your own browser's
+`localStorage` and never leaves your device.
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
