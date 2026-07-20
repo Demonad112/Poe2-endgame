@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CURRENT_PATCH, LEAGUE_NAME } from "@/lib/constants";
+import { BASE_PATH } from "@/lib/basePath";
 
 const CARDS = [
   {
@@ -54,20 +56,33 @@ const CARDS = [
 export default function Home() {
   return (
     <div className="flex flex-col gap-14">
-      <div className="flex flex-col items-start gap-4 py-6">
-        <span className="rounded-full border border-[var(--accent)]/25 bg-[var(--accent-soft)] px-3 py-1 text-xs font-medium tracking-wide text-[var(--accent)] uppercase">
-          Patch {CURRENT_PATCH} · {LEAGUE_NAME}
-        </span>
-        <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-          <span className="text-gradient-gold">Path of Exile 2</span>
-          <br />
-          <span className="text-slate-100">Endgame Companion</span>
-        </h1>
-        <p className="max-w-2xl text-lg text-slate-400">
-          A second-monitor reference for the &quot;Return of the Ancients&quot;
-          endgame: track your progression, plan your Atlas allocation, and
-          pick a farming loop.
-        </p>
+      <div className="relative overflow-hidden rounded-2xl border border-white/10">
+        <Image
+          src={`${BASE_PATH}/images/atlas-constant.webp`}
+          alt=""
+          aria-hidden
+          fill
+          priority
+          sizes="(min-width: 1152px) 1152px, 100vw"
+          className="object-cover opacity-[0.55]"
+          style={{ objectPosition: "50% 38%" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-[var(--background)]/55 to-[var(--background)]" />
+        <div className="relative z-10 flex flex-col items-start gap-4 px-6 py-16 sm:px-10 sm:py-24">
+          <span className="rounded-full border border-[var(--accent)]/25 bg-[var(--accent-soft)] px-3 py-1 text-xs font-medium tracking-wide text-[var(--accent)] uppercase backdrop-blur-sm">
+            Patch {CURRENT_PATCH} · {LEAGUE_NAME}
+          </span>
+          <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
+            <span className="text-gradient-gold">Path of Exile 2</span>
+            <br />
+            <span className="text-slate-100">Endgame Companion</span>
+          </h1>
+          <p className="max-w-2xl text-lg text-slate-300">
+            A second-monitor reference for the &quot;Return of the Ancients&quot;
+            endgame: track your progression, plan your Atlas allocation, and
+            pick a farming loop.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
