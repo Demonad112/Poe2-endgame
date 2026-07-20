@@ -10,10 +10,10 @@ export function ClusterNode({ cluster }: { cluster: AtlasCluster }) {
 
   return (
     <li
-      className={`rounded-md border p-3 transition-colors ${
+      className={`rounded-md border p-3 transition-all ${
         allocated
           ? "border-emerald-500/30 bg-emerald-500/5"
-          : "border-slate-800 bg-slate-900/40"
+          : "border-white/10 bg-white/[0.03] hover:border-white/20"
       }`}
     >
       <label className="flex cursor-pointer items-start gap-2">
@@ -25,7 +25,7 @@ export function ClusterNode({ cluster }: { cluster: AtlasCluster }) {
         />
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-mono text-slate-500">
+            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white/[0.06] font-mono text-[10px] text-slate-400">
               {cluster.order}
             </span>
             <span
@@ -34,7 +34,7 @@ export function ClusterNode({ cluster }: { cluster: AtlasCluster }) {
               {cluster.name}
             </span>
             {cluster.killGated && (
-              <span className="rounded border border-slate-600 px-1.5 py-0.5 text-[10px] text-slate-400">
+              <span className="rounded border border-white/15 px-1.5 py-0.5 text-[10px] text-slate-400">
                 kill-gated
               </span>
             )}

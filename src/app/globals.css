@@ -1,24 +1,82 @@
 @import "tailwindcss";
 
 :root {
-  --background: #020617;
-  --foreground: #f1f5f9;
+  --background: #060608;
+  --foreground: #f2ede4;
+  --accent: #e3b341;
+  --accent-soft: #e3b34122;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+* {
+  scrollbar-color: #3f3a30 transparent;
+}
+
+html {
+  color-scheme: dark;
+}
+
 body {
-  background: var(--background);
+  background:
+    radial-gradient(ellipse 1200px 600px at 50% -10%, rgba(227, 179, 65, 0.08), transparent 60%),
+    radial-gradient(ellipse 900px 500px at 100% 0%, rgba(139, 92, 246, 0.06), transparent 55%),
+    var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 main {
   max-width: 72rem;
   margin-inline: auto;
   width: 100%;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2822;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3a30;
+  background-clip: padding-box;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.text-gradient-gold {
+  background: linear-gradient(120deg, #f4d78c 0%, #e3b341 45%, #b8862f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

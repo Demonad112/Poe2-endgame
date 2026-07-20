@@ -31,11 +31,22 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
+      <body className="min-h-full flex flex-col">
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-0 opacity-[0.035]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+            backgroundSize: "44px 44px",
+          }}
+        />
         <PersistedStateProvider>
-          <PatchVersionBanner />
-          <NavBar />
-          <main className="flex-1 px-4 py-6 md:px-8">{children}</main>
+          <div className="relative z-10 flex min-h-full flex-1 flex-col">
+            <PatchVersionBanner />
+            <NavBar />
+            <main className="flex-1 px-4 py-8 md:px-8">{children}</main>
+          </div>
         </PersistedStateProvider>
       </body>
     </html>

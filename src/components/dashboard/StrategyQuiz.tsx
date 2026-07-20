@@ -39,7 +39,7 @@ export function StrategyQuiz() {
   }, [budget, tankiness, stage]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 rounded-xl border border-white/10 bg-white/[0.02] p-5">
       <div className="grid gap-4 sm:grid-cols-3">
         <QuizSelect
           label="Budget"
@@ -63,8 +63,10 @@ export function StrategyQuiz() {
 
       {recommended.length > 0 && (
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-slate-300">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">
+            <span className="h-px flex-1 bg-gradient-to-r from-[var(--accent)]/40 to-transparent" />
             Recommended for you
+            <span className="h-px flex-1 bg-gradient-to-l from-[var(--accent)]/40 to-transparent" />
           </h3>
           <div className="grid gap-3 sm:grid-cols-3">
             {recommended.map((strategy) => (
@@ -89,12 +91,12 @@ function QuizSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="text-slate-400">{label}</span>
+    <label className="flex flex-col gap-1.5 text-sm">
+      <span className="font-medium text-slate-400">{label}</span>
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-slate-100"
+        className="rounded-md border border-white/10 bg-black/30 px-2.5 py-2 text-slate-100 outline-none transition-colors focus:border-[var(--accent)]/50"
       >
         <option value="" disabled>
           Choose...

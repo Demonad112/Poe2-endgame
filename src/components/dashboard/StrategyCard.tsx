@@ -17,20 +17,20 @@ export function StrategyCard({ strategy }: { strategy: FarmingStrategy }) {
 
   return (
     <div
-      className={`flex flex-col gap-2 rounded-lg border p-4 ${
+      className={`flex flex-col gap-2 rounded-lg border p-4 transition-all ${
         pinned
-          ? "border-emerald-500/50 bg-emerald-500/5"
-          : "border-slate-800 bg-slate-900/40"
+          ? "border-[var(--accent)]/40 bg-[var(--accent-soft)] shadow-[0_0_16px_-4px_rgba(227,179,65,0.3)]"
+          : "border-white/10 bg-white/[0.03] hover:border-white/20"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold text-slate-100">{strategy.name}</h3>
         <button
           onClick={() => pinStrategy(pinned ? undefined : strategy.id)}
-          className={`shrink-0 rounded-md border px-2 py-1 text-xs ${
+          className={`shrink-0 rounded-md border px-2 py-1 text-xs transition-colors ${
             pinned
-              ? "border-emerald-500/50 text-emerald-300"
-              : "border-slate-700 text-slate-400 hover:border-slate-500"
+              ? "border-[var(--accent)]/40 text-[var(--accent)]"
+              : "border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200"
           }`}
         >
           {pinned ? "★ Pinned" : "☆ Pin"}

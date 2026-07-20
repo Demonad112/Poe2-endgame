@@ -14,9 +14,9 @@ export function WarningPanel({
   if (relevant.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4">
+    <div className="rounded-lg border border-red-500/25 bg-gradient-to-b from-red-500/[0.07] to-red-500/[0.03] p-4">
       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-red-300">
-        ⚠ {title}
+        <span aria-hidden>⚠</span> {title}
       </h3>
       <ul className="space-y-3">
         {relevant.map((m) => (

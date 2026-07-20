@@ -17,20 +17,22 @@ export function MechanicSubTreeList({ clusters }: { clusters: AtlasCluster[] }) 
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-white/10 bg-black/20 p-1.5">
         {MECHANICS.map((mechanic) => (
           <button
             key={mechanic}
             onClick={() => setActive(mechanic)}
-            className={`rounded-md px-1 py-1 transition-opacity ${
-              active === mechanic ? "opacity-100" : "opacity-50 hover:opacity-80"
+            className={`rounded-md px-1 py-1 transition-all ${
+              active === mechanic
+                ? "bg-white/[0.07] ring-1 ring-white/10"
+                : "opacity-50 hover:opacity-80"
             }`}
           >
             <Tag mechanic={mechanic} />
           </button>
         ))}
       </div>
-      <p className="mb-3 text-xs text-slate-500">
+      <p className="mb-3 rounded-md border border-white/5 bg-white/[0.02] px-3 py-2 text-xs text-slate-500">
         Priority order for {MECHANIC_LABELS[active]}. Guide-wide rule: don&apos;t
         run this mechanic&apos;s own tablets while questing it — it slows down
         finishing the quest.

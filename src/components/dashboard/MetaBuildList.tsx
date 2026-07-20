@@ -13,7 +13,7 @@ export function MetaBuildList({ builds }: { builds: MetaBuild[] }) {
       {builds.map((build) => (
         <li
           key={build.id}
-          className="rounded-md border border-slate-800 bg-slate-900/40 p-3"
+          className="rounded-md border border-white/10 bg-white/[0.03] p-3 transition-colors hover:border-white/20"
         >
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-slate-100">{build.name}</span>

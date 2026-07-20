@@ -6,7 +6,7 @@ export function BenchmarkGate({ gate }: { gate: BenchmarkGateType }) {
 
   return (
     <div
-      className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
+      className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm ${
         isHard
           ? "border-red-500/40 bg-red-500/10 text-red-200"
           : "border-amber-500/30 bg-amber-500/10 text-amber-200"
