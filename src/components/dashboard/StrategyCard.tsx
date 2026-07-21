@@ -17,7 +17,8 @@ export function StrategyCard({ strategy }: { strategy: FarmingStrategy }) {
 
   return (
     <div
-      className={`flex flex-col gap-2 rounded-lg border p-4 transition-all ${
+      id={strategy.id}
+      className={`scroll-mt-24 flex flex-col gap-2 rounded-lg border p-4 transition-all ${
         pinned
           ? "border-[var(--accent)]/40 bg-[var(--accent-soft)] shadow-[0_0_16px_-4px_rgba(227,179,65,0.3)]"
           : "border-white/10 bg-white/[0.03] hover:border-white/20"

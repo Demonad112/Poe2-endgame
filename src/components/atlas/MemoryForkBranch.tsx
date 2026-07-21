@@ -10,7 +10,8 @@ export function MemoryForkBranch({ fork }: { fork: MemoryFork }) {
 
   return (
     <div
-      className={`flex-1 rounded-lg border p-4 transition-all hover:-translate-y-0.5 ${
+      id={fork.id}
+      className={`scroll-mt-24 flex-1 rounded-lg border p-4 transition-all hover:-translate-y-0.5 ${
         allocated
           ? "border-emerald-500/30 bg-emerald-500/5"
           : "border-indigo-500/30 bg-indigo-500/[0.06] hover:border-indigo-400/50 hover:shadow-[0_8px_24px_-10px_rgba(129,140,248,0.35)]"

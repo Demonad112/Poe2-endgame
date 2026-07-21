@@ -86,3 +86,17 @@ main {
   background-clip: text;
   color: transparent;
 }
+
+@keyframes search-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 28px 6px rgba(227, 179, 65, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.search-highlight {
+  animation: search-highlight-pulse 1.8s ease-out;
+  border-radius: 0.5rem;
+}

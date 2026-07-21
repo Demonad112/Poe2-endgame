@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { atlasClusters, memoryForks } from "@/data/atlasTree";
 import { ClusterNode } from "./ClusterNode";
 import { MemoryForkBranch } from "./MemoryForkBranch";
@@ -69,7 +70,9 @@ export function ClusterFlow() {
           title="Mechanic Sub-Trees"
           description="Commit to one mechanic at a time — payoff nodes sit deep. Switch tabs to see each mechanic's priority order."
         />
-        <MechanicSubTreeList clusters={atlasClusters} />
+        <Suspense fallback={null}>
+          <MechanicSubTreeList clusters={atlasClusters} />
+        </Suspense>
       </section>
 
       <section>

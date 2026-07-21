@@ -20,7 +20,7 @@ export function WarningPanel({
       </h3>
       <ul className="space-y-3">
         {relevant.map((m) => (
-          <li key={m.id} className="text-sm text-red-100/90">
+          <li key={m.id} id={m.id} className="scroll-mt-24 text-sm text-red-100/90">
             <p className="font-medium text-red-200">{m.title}</p>
             <p className="text-red-100/70">{m.description}</p>
             {m.relatedMechanics && m.relatedMechanics.length > 0 && (

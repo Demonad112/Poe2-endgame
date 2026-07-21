@@ -10,7 +10,8 @@ export function ClusterNode({ cluster }: { cluster: AtlasCluster }) {
 
   return (
     <li
-      className={`rounded-md border p-3 transition-all ${
+      id={cluster.id}
+      className={`scroll-mt-24 rounded-md border p-3 transition-all ${
         allocated
           ? "border-emerald-500/30 bg-emerald-500/5"
           : "border-white/10 bg-white/[0.03] hover:border-white/20"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { AtlasCluster, Mechanic } from "@/lib/types";
 import { MECHANIC_LABELS } from "@/lib/constants";
 import { Tag } from "@/components/shared/Tag";
@@ -8,8 +9,28 @@ import { ClusterNode } from "./ClusterNode";
 
 const MECHANICS: Mechanic[] = ["abyss", "breach", "expedition", "ritual", "delirium"];
 
+function isMechanic(value: string | null): value is Mechanic {
+  return !!value && (MECHANICS as string[]).includes(value);
+}
+
 export function MechanicSubTreeList({ clusters }: { clusters: AtlasCluster[] }) {
-  const [active, setActive] = useState<Mechanic>("abyss");
+  const searchParams = useSearchParams();
+  const mechanicParam = searchParams.get("mechanic");
+  const [active, setActive] = useState<Mechanic>(
+    isMechanic(mechanicParam) ? mechanicParam : "abyss"
+  );
+
+  // Search results for a mechanic sub-tree cluster carry ?mechanic=<x> since
+  // this tab picker only renders the active mechanic's clusters in the DOM —
+  // re-sync whenever that param changes (covers navigating between two
+  // different mechanic search results while already on this page). Adjusting
+  // during render (React's recommended pattern) instead of an effect avoids
+  // an extra commit/re-render cycle.
+  const [prevMechanicParam, setPrevMechanicParam] = useState(mechanicParam);
+  if (mechanicParam !== prevMechanicParam) {
+    setPrevMechanicParam(mechanicParam);
+    if (isMechanic(mechanicParam)) setActive(mechanicParam);
+  }
 
   const activeNodes = clusters
     .filter((c) => c.group === "mechanic-subtree" && c.mechanic === active)

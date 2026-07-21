@@ -4,6 +4,8 @@ import "./globals.css";
 import { NavBar } from "@/components/layout/NavBar";
 import { PatchVersionBanner } from "@/components/layout/PatchVersionBanner";
 import { Footer } from "@/components/layout/Footer";
+import { CommandPalette } from "@/components/layout/CommandPalette";
+import { HashHighlight } from "@/components/layout/HashHighlight";
 import { PersistedStateProvider } from "@/hooks/usePersistedState";
 
 const geistSans = Geist({
@@ -78,6 +80,8 @@ export default function RootLayout({
             <main className="flex-1 px-4 py-8 md:px-8">{children}</main>
             <Footer />
           </div>
+          <CommandPalette />
+          <HashHighlight />
         </PersistedStateProvider>
       </body>
     </html>

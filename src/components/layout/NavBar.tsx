@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { OPEN_SEARCH_EVENT } from "./CommandPalette";
 
 function ChecklistIcon() {
   return (
@@ -91,6 +92,19 @@ export function NavBar() {
           );
         })}
       </div>
+      <button
+        onClick={() => window.dispatchEvent(new Event(OPEN_SEARCH_EVENT))}
+        className="ml-auto flex items-center gap-2 rounded-md border border-white/10 px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:border-white/20 hover:text-slate-200"
+      >
+        <svg viewBox="0 0 20 20" fill="none" className="size-3.5">
+          <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M16 16l-3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+        <span className="hidden sm:inline">Search</span>
+        <kbd className="rounded border border-white/15 px-1 py-0.5 font-mono text-[10px] text-slate-500">
+          ⌘K
+        </kbd>
+      </button>
     </nav>
   );
 }

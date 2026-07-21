@@ -18,7 +18,8 @@ export function ChecklistStep({
 
   return (
     <li
-      className={`rounded-lg border p-4 transition-all ${
+      id={step.id}
+      className={`scroll-mt-24 rounded-lg border p-4 transition-all ${
         complete
           ? "border-emerald-500/30 bg-emerald-500/5"
           : "border-white/10 bg-white/[0.03] hover:border-white/20"
