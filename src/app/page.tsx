@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CURRENT_PATCH, LEAGUE_NAME } from "@/lib/constants";
 import { BASE_PATH } from "@/lib/basePath";
+import { ProgressSummary } from "@/components/home/ProgressSummary";
 
 const CARDS = [
   {
@@ -84,6 +85,8 @@ export default function Home() {
           </p>
         </div>
       </div>
+
+      <ProgressSummary />
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {CARDS.map((card) => (
