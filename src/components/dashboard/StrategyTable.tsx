@@ -20,8 +20,8 @@ export function StrategyTable({ strategies }: { strategies: FarmingStrategy[] })
   const headerButton = (key: SortKey, label: string) => (
     <button
       onClick={() => setSortKey(key)}
-      className={`text-left font-medium ${
-        sortKey === key ? "text-emerald-400" : "text-slate-400"
+      className={`text-left font-medium transition-colors ${
+        sortKey === key ? "text-[var(--accent)]" : "text-slate-400 hover:text-slate-200"
       }`}
     >
       {label}
@@ -30,23 +30,26 @@ export function StrategyTable({ strategies }: { strategies: FarmingStrategy[] })
   );
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-800">
+    <div className="overflow-x-auto rounded-lg border border-white/10">
       <table className="w-full min-w-[720px] text-sm">
-        <thead className="border-b border-slate-800 bg-slate-900/60">
+        <thead className="border-b border-white/10 bg-white/[0.04]">
           <tr>
-            <th className="px-3 py-2 text-left">{headerButton("rank", "Strategy")}</th>
-            <th className="px-3 py-2 text-left">Mechanics</th>
-            <th className="px-3 py-2 text-left">
+            <th className="px-3 py-2.5 text-left">{headerButton("rank", "Strategy")}</th>
+            <th className="px-3 py-2.5 text-left">Mechanics</th>
+            <th className="px-3 py-2.5 text-left">
               {headerButton("investment", "Investment")}
             </th>
-            <th className="px-3 py-2 text-left">Expected return</th>
-            <th className="px-3 py-2 text-left">{headerButton("risk", "Risk")}</th>
-            <th className="px-3 py-2 text-left">LS / Late</th>
+            <th className="px-3 py-2.5 text-left">Expected return</th>
+            <th className="px-3 py-2.5 text-left">{headerButton("risk", "Risk")}</th>
+            <th className="px-3 py-2.5 text-left">LS / Late</th>
           </tr>
         </thead>
         <tbody>
           {sorted.map((strategy) => (
-            <tr key={strategy.id} className="border-b border-slate-800/60">
+            <tr
+              key={strategy.id}
+              className="border-b border-white/[0.06] transition-colors last:border-0 hover:bg-white/[0.02]"
+            >
               <td className="px-3 py-2 font-medium text-slate-100">
                 {strategy.name}
               </td>

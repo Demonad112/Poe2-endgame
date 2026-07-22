@@ -4,6 +4,7 @@ import { benchmarkGates } from "@/data/benchmarks";
 import { ChecklistSection } from "@/components/checklist/ChecklistSection";
 import { ChecklistProgressHeader } from "@/components/checklist/ChecklistProgressHeader";
 import { CommonMistakesPanel } from "@/components/checklist/CommonMistakesPanel";
+import { PageHeader } from "@/components/layout/PageHeader";
 import type { RoadmapPhase } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -30,15 +31,10 @@ export default function ChecklistPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-50">
-          Progression Checklist
-        </h1>
-        <p className="mt-1 text-slate-400">
-          Campaign end through the full 301-point Atlas tree. Check off steps
-          as you complete them — progress is saved in this browser.
-        </p>
-      </div>
+      <PageHeader
+        title="Progression Checklist"
+        description="Campaign end through the full 301-point Atlas tree. Check off steps as you complete them — progress is saved in this browser."
+      />
 
       <ChecklistProgressHeader />
       <CommonMistakesPanel />

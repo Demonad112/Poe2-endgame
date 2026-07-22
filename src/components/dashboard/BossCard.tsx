@@ -4,7 +4,10 @@ import { SourceFlag } from "@/components/shared/SourceFlag";
 
 export function BossCard({ boss }: { boss: PinnacleBoss }) {
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+    <div
+      id={boss.id}
+      className="scroll-mt-24 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-white/20"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-semibold text-slate-100">{boss.name}</h3>
         {boss.mechanic && !["apex", "trial"].includes(boss.mechanic) && (

@@ -1,5 +1,6 @@
 import type { BenchmarkGate, RoadmapPhase, RoadmapStep } from "@/lib/types";
 import { ROADMAP_PHASE_LABELS } from "@/lib/constants";
+import { SectionTitle } from "@/components/shared/SectionTitle";
 import { ChecklistStep } from "./ChecklistStep";
 
 export function ChecklistSection({
@@ -13,9 +14,7 @@ export function ChecklistSection({
 }) {
   return (
     <section>
-      <h2 className="mb-3 text-lg font-semibold text-slate-200">
-        {ROADMAP_PHASE_LABELS[phase] ?? phase}
-      </h2>
+      <SectionTitle>{ROADMAP_PHASE_LABELS[phase] ?? phase}</SectionTitle>
       <ul className="space-y-3">
         {steps.map((step) => (
           <ChecklistStep

@@ -18,10 +18,11 @@ export function ChecklistStep({
 
   return (
     <li
-      className={`rounded-lg border p-4 transition-colors ${
+      id={step.id}
+      className={`scroll-mt-24 rounded-lg border p-4 transition-all ${
         complete
           ? "border-emerald-500/30 bg-emerald-500/5"
-          : "border-slate-800 bg-slate-900/40"
+          : "border-white/10 bg-white/[0.03] hover:border-white/20"
       }`}
     >
       <label className="flex cursor-pointer items-start gap-3">
@@ -48,7 +49,7 @@ export function ChecklistStep({
       </label>
 
       {step.actionItems && step.actionItems.length > 0 && (
-        <ul className="mt-3 ml-7 space-y-1 border-l border-slate-800 pl-3">
+        <ul className="mt-3 ml-7 space-y-1 border-l border-white/10 pl-3">
           {step.actionItems.map((item, index) => {
             const key = actionItemKey(step.id, index);
             const done = isActionItemComplete(key);
