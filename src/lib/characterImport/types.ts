@@ -50,7 +50,10 @@ export interface ImportedCharacter {
   ascendancy?: string;
   league: string;
   stats: DefensiveStats;
-  ehpEstimate: number;
+  ehp: number;
+  // poe.ninja ships its own effectiveHealthPool; when present we show that
+  // real number, otherwise we fall back to the rough estimateEhp() stub.
+  ehpIsEstimate: boolean;
   skills: SkillSetup[];
   gear: GearItem[];
   passivePointsAllocated: number;

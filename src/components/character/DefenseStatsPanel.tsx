@@ -25,7 +25,10 @@ export function DefenseStatsPanel({
         <Stat label="Energy Shield" value={stats.energyShield.toLocaleString()} />
         <Stat label="Evasion" value={stats.evasionRating.toLocaleString()} />
         <Stat label="Armour" value={stats.armour.toLocaleString()} />
-        <Stat label="EHP (estimate)" value={character.ehpEstimate.toLocaleString()} />
+        <Stat
+          label={character.ehpIsEstimate ? "EHP (estimate)" : "EHP"}
+          value={character.ehp.toLocaleString()}
+        />
         {stats.ward > 0 && <Stat label="Ward" value={stats.ward.toLocaleString()} />}
         {stats.blockChance > 0 && (
           <Stat label="Block chance" value={`${stats.blockChance}%`} />
