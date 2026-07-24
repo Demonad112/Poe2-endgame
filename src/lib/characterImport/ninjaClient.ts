@@ -1,10 +1,14 @@
-// Client-side port of poe2-mcp's profile-API fetch flow (character_fetcher.py
-// / poe_ninja_api.py): read a version off an SSE stream, then fetch the
-// character model JSON at that version. Nothing in poe2-mcp has ever called
-// these endpoints from a browser (always Python httpx server-side), so CORS
-// behavior here is genuinely unverified — every failure path is surfaced as
-// a typed error so the UI can fall back to a paste-JSON flow instead of
-// silently failing.
+// Character fetch for the import feature.
+//
+// poe.ninja's public PoE2 profile API can't be called from a browser: it
+// blocks cross-origin requests (no Access-Control-Allow-Origin), and the
+// first hop is a Server-Sent Events stream that public CORS proxies buffer
+// and choke on. So instead of hitting poe.ninja directly, we call a tiny
+// server-side proxy (vercel-proxy/api/character.js in this repo, deployed to
+// Vercel) that runs the same two-step SSE->model fetch server-side and
+// returns the raw {type, charModel} JSON with permissive CORS headers. All
+// public data — no auth, no secrets. If the proxy is unreachable, the UI
+// falls back to the manual paste-JSON flow.
 
 export type NinjaFetchErrorReason = "cors-likely" | "not-found" | "network";
 
@@ -18,145 +22,64 @@ export class NinjaFetchError extends Error {
   }
 }
 
-const NINJA_BASE = "https://poe.ninja";
+// Overridable at build time via NEXT_PUBLIC_NINJA_PROXY_BASE (no trailing
+// slash) so the proxy can be redeployed/moved without a code change.
+const PROXY_BASE = (
+  process.env.NEXT_PUBLIC_NINJA_PROXY_BASE ||
+  "https://poe2-endgame-ninja-proxy.vercel.app"
+).replace(/\/+$/, "");
 
-// The whole operation (events SSE, optionally retried via proxy, then the
-// model fetch, optionally retried via proxy) shares this one deadline —
-// not a fresh timeout per hop — so a fully-blocked network can't stack up
-// to 4x the budget before the UI gives up. 20s was chosen as "clearly
-// broken" rather than "slow but working" for two round trips.
-const TOTAL_FETCH_BUDGET_MS = 20_000;
-
-// Fallback used only when a direct cross-origin fetch to poe.ninja fails
-// before a status code is even visible — the dominant signature of a CORS
-// block (no confirmed Access-Control-Allow-Origin header from poe.ninja for
-// browser requests). The profile/events endpoints return the same public,
-// unauthenticated data already visible on the character's public poe.ninja
-// page, so there's nothing sensitive passing through the proxy. Behavior
-// against the real poe.ninja endpoints is unverified in this dev environment
-// (no outbound network path to test against) — if api.allorigins.win itself
-// is ever unreliable, the paste-JSON fallback in ImportPanel still covers
-// the gap.
-const CORS_PROXY_PREFIX = "https://api.allorigins.win/raw?url=";
-
-async function fetchDirectOrProxied(
-  url: string,
-  init: RequestInit,
-  signal: AbortSignal
-): Promise<Response> {
-  try {
-    return await fetch(url, { ...init, signal });
-  } catch (err) {
-    if (signal.aborted) {
-      throw new NinjaFetchError("network", `Timed out reaching ${url}`);
-    }
-    if (err instanceof DOMException && err.name === "AbortError") {
-      throw new NinjaFetchError("network", `Request aborted for ${url}`);
-    }
-    try {
-      return await fetch(`${CORS_PROXY_PREFIX}${encodeURIComponent(url)}`, {
-        ...init,
-        signal,
-      });
-    } catch {
-      if (signal.aborted) {
-        throw new NinjaFetchError(
-          "network",
-          `Timed out reaching ${url} (via CORS proxy)`
-        );
-      }
-      throw new NinjaFetchError(
-        "cors-likely",
-        `Could not reach ${url} directly or via CORS proxy`
-      );
-    }
-  }
-}
-
-async function readSseVersion(
-  url: string,
-  signal: AbortSignal
-): Promise<number | null> {
-  const response = await fetchDirectOrProxied(
-    url,
-    { headers: { Accept: "text/event-stream" } },
-    signal
-  );
-  if (response.status === 404) {
-    throw new NinjaFetchError("not-found", `Not found: ${url}`);
-  }
-  if (!response.ok || !response.body) {
-    throw new NinjaFetchError(
-      "network",
-      `Unexpected response (${response.status}) from ${url}`
-    );
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  try {
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      // Keep the last (possibly incomplete) line in the buffer for the next chunk.
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (line.startsWith("data:")) {
-          try {
-            const parsed = JSON.parse(line.slice(5).trim());
-            if (typeof parsed?.version === "number") return parsed.version;
-          } catch {
-            // malformed SSE payload — keep reading
-          }
-        }
-      }
-    }
-  } finally {
-    reader.cancel().catch(() => {});
-  }
-  return null;
-}
+const FETCH_TIMEOUT_MS = 20_000;
 
 /**
- * Fetch the raw `{type, charModel}` blob for a character via poe.ninja's
- * public (no-auth) profile API. Throws NinjaFetchError on any failure.
+ * Fetch the raw `{type, charModel}` blob for a character via the server-side
+ * proxy (which talks to poe.ninja's public profile API). Throws
+ * NinjaFetchError on any failure so the UI can offer the paste-JSON fallback.
  */
 export async function fetchCharModel(
   account: string,
   leagueSlug: string,
   character: string
 ): Promise<unknown> {
-  const signal = AbortSignal.timeout(TOTAL_FETCH_BUDGET_MS);
+  const url =
+    `${PROXY_BASE}/api/character?account=${encodeURIComponent(account)}` +
+    `&league=${encodeURIComponent(leagueSlug)}` +
+    `&character=${encodeURIComponent(character)}`;
 
-  const eventsUrl = `${NINJA_BASE}/poe2/api/events/character/${encodeURIComponent(
-    account
-  )}/${encodeURIComponent(leagueSlug)}/${encodeURIComponent(character)}`;
-  const version = await readSseVersion(eventsUrl, signal);
-  if (version === null) {
+  let response: Response;
+  try {
+    response = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      throw new NinjaFetchError("network", "The import service timed out.");
+    }
+    // A fetch that never returns a Response (network down, or the proxy's
+    // CORS/protection blocked it before the body was readable) lands here.
     throw new NinjaFetchError(
-      "not-found",
-      "poe.ninja did not report a character version — check that the profile is public."
+      "cors-likely",
+      "Couldn't reach the import service."
     );
   }
 
-  const modelUrl = `${NINJA_BASE}/poe2/api/profile/characters/${encodeURIComponent(
-    account
-  )}/${encodeURIComponent(leagueSlug)}/${encodeURIComponent(
-    character
-  )}/model/${version}`;
-
-  const response = await fetchDirectOrProxied(modelUrl, {}, signal);
   if (response.status === 404) {
-    throw new NinjaFetchError("not-found", `Not found: ${modelUrl}`);
+    // The proxy returns 404 both for an unknown character and for a
+    // poe.ninja "no version" result — its JSON body carries the detail.
+    let detail = "Character not found — check the profile is public and the URL is correct.";
+    try {
+      const body = await response.json();
+      if (body?.error) detail = String(body.error);
+    } catch {
+      // non-JSON body — keep the default message
+    }
+    throw new NinjaFetchError("not-found", detail);
   }
+
   if (!response.ok) {
     throw new NinjaFetchError(
       "network",
-      `Unexpected response (${response.status}) from ${modelUrl}`
+      `Import service returned ${response.status}.`
     );
   }
+
   return response.json();
 }
