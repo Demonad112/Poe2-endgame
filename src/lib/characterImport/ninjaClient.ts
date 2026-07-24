@@ -19,33 +19,69 @@ export class NinjaFetchError extends Error {
 }
 
 const NINJA_BASE = "https://poe.ninja";
-const FETCH_TIMEOUT_MS = 15_000;
 
-// fetch() never times out on its own — a stalled connection (not just a
-// CORS rejection, which fails fast) would otherwise leave the UI stuck on
-// "Fetching…" indefinitely. Every request below is bounded by this.
-function timeoutSignal(): AbortSignal {
-  return AbortSignal.timeout(FETCH_TIMEOUT_MS);
-}
+// The whole operation (events SSE, optionally retried via proxy, then the
+// model fetch, optionally retried via proxy) shares this one deadline —
+// not a fresh timeout per hop — so a fully-blocked network can't stack up
+// to 4x the budget before the UI gives up. 20s was chosen as "clearly
+// broken" rather than "slow but working" for two round trips.
+const TOTAL_FETCH_BUDGET_MS = 20_000;
 
-async function readSseVersion(url: string): Promise<number | null> {
-  let response: Response;
+// Fallback used only when a direct cross-origin fetch to poe.ninja fails
+// before a status code is even visible — the dominant signature of a CORS
+// block (no confirmed Access-Control-Allow-Origin header from poe.ninja for
+// browser requests). The profile/events endpoints return the same public,
+// unauthenticated data already visible on the character's public poe.ninja
+// page, so there's nothing sensitive passing through the proxy. Behavior
+// against the real poe.ninja endpoints is unverified in this dev environment
+// (no outbound network path to test against) — if api.allorigins.win itself
+// is ever unreliable, the paste-JSON fallback in ImportPanel still covers
+// the gap.
+const CORS_PROXY_PREFIX = "https://api.allorigins.win/raw?url=";
+
+async function fetchDirectOrProxied(
+  url: string,
+  init: RequestInit,
+  signal: AbortSignal
+): Promise<Response> {
   try {
-    response = await fetch(url, {
-      headers: { Accept: "text/event-stream" },
-      signal: timeoutSignal(),
-    });
+    return await fetch(url, { ...init, signal });
   } catch (err) {
-    if (err instanceof DOMException && err.name === "TimeoutError") {
+    if (signal.aborted) {
       throw new NinjaFetchError("network", `Timed out reaching ${url}`);
     }
-    // A cross-origin fetch that never reaches the server (CORS preflight
-    // rejection, DNS failure, offline) throws a generic TypeError in
-    // browsers — there's no way to distinguish "blocked by CORS" from other
-    // network failures from script, so this is the dominant real-world
-    // cause for a third-party API with no confirmed ACAO header.
-    throw new NinjaFetchError("cors-likely", `Could not reach ${url}`);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new NinjaFetchError("network", `Request aborted for ${url}`);
+    }
+    try {
+      return await fetch(`${CORS_PROXY_PREFIX}${encodeURIComponent(url)}`, {
+        ...init,
+        signal,
+      });
+    } catch {
+      if (signal.aborted) {
+        throw new NinjaFetchError(
+          "network",
+          `Timed out reaching ${url} (via CORS proxy)`
+        );
+      }
+      throw new NinjaFetchError(
+        "cors-likely",
+        `Could not reach ${url} directly or via CORS proxy`
+      );
+    }
   }
+}
+
+async function readSseVersion(
+  url: string,
+  signal: AbortSignal
+): Promise<number | null> {
+  const response = await fetchDirectOrProxied(
+    url,
+    { headers: { Accept: "text/event-stream" } },
+    signal
+  );
   if (response.status === 404) {
     throw new NinjaFetchError("not-found", `Not found: ${url}`);
   }
@@ -93,10 +129,12 @@ export async function fetchCharModel(
   leagueSlug: string,
   character: string
 ): Promise<unknown> {
+  const signal = AbortSignal.timeout(TOTAL_FETCH_BUDGET_MS);
+
   const eventsUrl = `${NINJA_BASE}/poe2/api/events/character/${encodeURIComponent(
     account
   )}/${encodeURIComponent(leagueSlug)}/${encodeURIComponent(character)}`;
-  const version = await readSseVersion(eventsUrl);
+  const version = await readSseVersion(eventsUrl, signal);
   if (version === null) {
     throw new NinjaFetchError(
       "not-found",
@@ -110,15 +148,7 @@ export async function fetchCharModel(
     character
   )}/model/${version}`;
 
-  let response: Response;
-  try {
-    response = await fetch(modelUrl, { signal: timeoutSignal() });
-  } catch (err) {
-    if (err instanceof DOMException && err.name === "TimeoutError") {
-      throw new NinjaFetchError("network", `Timed out reaching ${modelUrl}`);
-    }
-    throw new NinjaFetchError("cors-likely", `Could not reach ${modelUrl}`);
-  }
+  const response = await fetchDirectOrProxied(modelUrl, {}, signal);
   if (response.status === 404) {
     throw new NinjaFetchError("not-found", `Not found: ${modelUrl}`);
   }
