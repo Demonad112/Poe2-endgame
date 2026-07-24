@@ -1,3 +1,5 @@
+import type { ImportedCharacter } from "./characterImport/types";
+
 export type SourceDoc = "atlas-tree-fundamentals" | "strategy-guide";
 export type Verification = "confirmed" | "unverified" | "conflicting";
 
@@ -153,6 +155,9 @@ export interface PersistedState {
   dashboard: {
     lastQuizAnswers: Record<string, string>;
     pinnedStrategyId?: string;
+  };
+  character: {
+    pinnedImport?: ImportedCharacter;
   };
   updatedAt: string;
 }

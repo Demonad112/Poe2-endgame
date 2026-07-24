@@ -12,7 +12,8 @@ export type SearchCategory =
   | "Strategy"
   | "Boss"
   | "Build"
-  | "Mistake";
+  | "Mistake"
+  | "Character";
 
 export interface SearchEntry {
   id: string;
@@ -35,6 +36,14 @@ function hrefForMistake(stages: Stage[]): string {
 }
 
 export const searchIndex: SearchEntry[] = [
+  {
+    id: "character-import",
+    title: "Character Import & Analysis",
+    subtitle:
+      "Paste a poe.ninja profile URL to see defenses, skills, and gear",
+    category: "Character",
+    href: "/character",
+  },
   ...roadmapSteps.map((s): SearchEntry => ({
     id: s.id,
     title: s.title,
