@@ -52,6 +52,23 @@ const CARDS = [
       </>
     ),
   },
+  {
+    href: "/character",
+    title: "Character Import",
+    description:
+      "Paste a poe.ninja profile URL to see your character's defenses, skills, and gear — parsed entirely in your browser.",
+    icon: (
+      <>
+        <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.4" />
+        <path
+          d="M5.5 19.5c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+      </>
+    ),
+  },
 ];
 
 export default function Home() {

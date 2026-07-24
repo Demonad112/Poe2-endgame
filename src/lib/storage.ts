@@ -8,6 +8,7 @@ const DEFAULT_STATE: PersistedState = {
   checklist: { completedStepIds: [], completedActionItemKeys: [] },
   atlas: { allocatedClusterIds: [], allocatedForkIds: [] },
   dashboard: { lastQuizAnswers: {}, pinnedStrategyId: undefined },
+  character: { pinnedImport: undefined },
   updatedAt: new Date(0).toISOString(),
 };
 

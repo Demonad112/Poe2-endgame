@@ -11,6 +11,7 @@ const CATEGORY_COLORS: Record<SearchCategory, string> = {
   Boss: "text-red-300",
   Build: "text-cyan-300",
   Mistake: "text-red-300",
+  Character: "text-[var(--accent)]",
 };
 
 export const OPEN_SEARCH_EVENT = "app:open-search";
