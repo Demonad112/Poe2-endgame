@@ -68,7 +68,7 @@ export function ImportPanel({
       if (err instanceof NinjaFetchError) {
         if (err.reason === "cors-likely") {
           setError(
-            "poe.ninja blocked the direct browser request (likely CORS). Paste the character JSON below instead — see the instructions there."
+            "Couldn't reach poe.ninja directly or via the fallback CORS proxy (likely blocked). Paste the character JSON below instead — see the instructions there."
           );
         } else if (err.reason === "not-found") {
           setError(
