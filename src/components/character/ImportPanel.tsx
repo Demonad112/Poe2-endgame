@@ -5,9 +5,24 @@ import { parseProfileUrl } from "@/lib/characterImport/parseProfileUrl";
 import { fetchCharModel, NinjaFetchError } from "@/lib/characterImport/ninjaClient";
 import {
   normalizeCharacter,
+  extractPobExport,
   CharModelParseError,
 } from "@/lib/characterImport/parseCharModel";
+import { decodePobStats } from "@/lib/characterImport/pobStats";
 import type { ImportedCharacter } from "@/lib/characterImport/types";
+
+/**
+ * Attach Path of Building-derived stats (real DPS, max hit taken, crit) when
+ * the character model carries a decodable export. Best-effort: a failed or
+ * absent export just yields the character unchanged.
+ */
+async function withPobStats(
+  character: ImportedCharacter,
+  raw: unknown
+): Promise<ImportedCharacter> {
+  const pob = await decodePobStats(extractPobExport(raw));
+  return pob ? { ...character, pob } : character;
+}
 
 type Status = "idle" | "loading";
 
@@ -60,8 +75,9 @@ export function ImportPanel({
         parsed.account,
         parsed.character
       );
+      const enriched = await withPobStats(character, raw);
       setStatus("idle");
-      onImported(character);
+      onImported(enriched);
     } catch (err) {
       setStatus("idle");
       setShowPaste(true);
@@ -85,7 +101,7 @@ export function ImportPanel({
     }
   };
 
-  const handlePasteSubmit = (e: FormEvent) => {
+  const handlePasteSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setPasteError(null);
     try {
@@ -94,7 +110,7 @@ export function ImportPanel({
         fetchedAt: new Date().toISOString(),
         importMethod: "pasted-json",
       });
-      onImported(character);
+      onImported(await withPobStats(character, raw));
     } catch (err) {
       if (err instanceof CharModelParseError) {
         setPasteError(err.message);

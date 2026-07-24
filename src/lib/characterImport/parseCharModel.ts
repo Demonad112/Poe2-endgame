@@ -76,6 +76,7 @@ interface RawCharModel {
   skills?: unknown[];
   passiveSelection?: unknown;
   defensiveStats?: Record<string, number>;
+  pathOfBuildingExport?: string;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -108,6 +109,17 @@ export function extractCharModel(raw: unknown): RawCharModel {
     );
   }
   return candidate as RawCharModel;
+}
+
+/**
+ * The raw Path of Building export blob, if the character has one. Decoded
+ * separately (and asynchronously) by decodePobStats — kept out of
+ * normalizeCharacter so that stays synchronous and localStorage-friendly.
+ */
+export function extractPobExport(raw: unknown): string | undefined {
+  const model = extractCharModel(raw);
+  const blob = model.pathOfBuildingExport;
+  return typeof blob === "string" && blob.length > 0 ? blob : undefined;
 }
 
 // poe.ninja skills carry gems under `allGems` (each with an

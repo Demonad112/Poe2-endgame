@@ -42,6 +42,39 @@ export interface GearItem {
   mods: string[];
 }
 
+export interface DamageTypeBreakdown {
+  physical: number;
+  fire: number;
+  cold: number;
+  lightning: number;
+  chaos: number;
+}
+
+// Stats computed by Path of Building itself, decoded from the
+// `pathOfBuildingExport` blob poe.ninja embeds in the character model.
+// These are PoB's numbers, not ours — notably real DPS, which we have no
+// calculator for.
+export interface PobStats {
+  mainSkill?: string;
+  combinedDps: number;
+  totalDps: number;
+  dotDps: number;
+  averageDamage: number;
+  /** Attacks/casts per second. */
+  speed: number;
+  critChance: number;
+  critMultiplier: number;
+  hitChance: number;
+  accuracy: number;
+  totalEhp: number;
+  /** Largest single hit survivable, per damage type — exposes one-shot risk. */
+  maxHitTaken: DamageTypeBreakdown;
+  resistOverCap: Omit<DamageTypeBreakdown, "physical">;
+  physicalDamageReduction: number;
+  spellSuppression: number;
+  blockChance: number;
+}
+
 export interface ImportedCharacter {
   name: string;
   account: string;
@@ -57,5 +90,7 @@ export interface ImportedCharacter {
   skills: SkillSetup[];
   gear: GearItem[];
   passivePointsAllocated: number;
+  /** Present when the character had a decodable Path of Building export. */
+  pob?: PobStats;
   provenance: ImportProvenance;
 }

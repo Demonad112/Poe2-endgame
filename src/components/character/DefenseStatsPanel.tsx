@@ -16,7 +16,9 @@ export function DefenseStatsPanel({
 }: {
   character: ImportedCharacter;
 }) {
-  const { stats } = character;
+  const { stats, pob } = character;
+  const blockChance = stats.blockChance || pob?.blockChance || 0;
+
   return (
     <div className="space-y-4">
       <SectionTitle>Defenses</SectionTitle>
@@ -30,11 +32,26 @@ export function DefenseStatsPanel({
           value={character.ehp.toLocaleString()}
         />
         {stats.ward > 0 && <Stat label="Ward" value={stats.ward.toLocaleString()} />}
-        {stats.blockChance > 0 && (
-          <Stat label="Block chance" value={`${stats.blockChance}%`} />
+        {stats.evadeChance > 0 && (
+          <Stat label="Evade chance" value={`${Math.round(stats.evadeChance)}%`} />
+        )}
+        {blockChance > 0 && (
+          <Stat label="Block chance" value={`${Math.round(blockChance)}%`} />
+        )}
+        {pob && pob.physicalDamageReduction > 0 && (
+          <Stat
+            label="Phys. reduction"
+            value={`${Math.round(pob.physicalDamageReduction)}%`}
+          />
+        )}
+        {pob && pob.spellSuppression > 0 && (
+          <Stat
+            label="Spell suppression"
+            value={`${Math.round(pob.spellSuppression)}%`}
+          />
         )}
       </div>
-      <ResistanceBars stats={stats} />
+      <ResistanceBars stats={stats} pob={pob} />
     </div>
   );
 }
