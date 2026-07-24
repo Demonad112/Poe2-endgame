@@ -48,10 +48,25 @@ function DashboardIcon() {
   );
 }
 
+function CharacterIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="size-4">
+      <circle cx="10" cy="6" r="3" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 const LINKS: { href: string; label: string; icon: ReactNode }[] = [
   { href: "/checklist", label: "Checklist", icon: <ChecklistIcon /> },
   { href: "/atlas", label: "Atlas Tree", icon: <AtlasIcon /> },
   { href: "/dashboard", label: "Dashboard", icon: <DashboardIcon /> },
+  { href: "/character", label: "Character", icon: <CharacterIcon /> },
 ];
 
 export function NavBar() {
