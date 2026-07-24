@@ -11,7 +11,7 @@ export default function CharacterPage() {
     <div className="flex flex-col gap-8">
       <PageHeader
         title="Character Import"
-        description="Paste a poe.ninja profile URL to see your character's defenses, skills, and gear — parsed entirely in your browser, nothing is sent to a server."
+        description="Paste a poe.ninja profile URL to see your character's defenses, skills, and gear. The lookup goes through a small proxy — poe.ninja blocks direct browser requests — but it only forwards public profile data and stores nothing."
       />
       <CharacterWorkspace />
     </div>

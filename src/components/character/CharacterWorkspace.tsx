@@ -5,6 +5,9 @@ import { useCharacterImport } from "@/hooks/useCharacterImport";
 import { ImportPanel } from "./ImportPanel";
 import { CharacterSummaryCard } from "./CharacterSummaryCard";
 import { DefenseStatsPanel } from "./DefenseStatsPanel";
+import { OffensePanel } from "./OffensePanel";
+import { MaxHitPanel } from "./MaxHitPanel";
+import { BuildScoreCard } from "./BuildScoreCard";
 import { PassiveTreeSummary } from "./PassiveTreeSummary";
 import { SkillsGearPanel } from "./SkillsGearPanel";
 import { LimitsDisclaimer } from "./LimitsDisclaimer";
@@ -33,8 +36,24 @@ export function CharacterWorkspace() {
           </section>
 
           <section>
+            <BuildScoreCard character={pinnedImport} />
+          </section>
+
+          {pinnedImport.pob && pinnedImport.pob.combinedDps > 0 && (
+            <section>
+              <OffensePanel pob={pinnedImport.pob} />
+            </section>
+          )}
+
+          <section>
             <DefenseStatsPanel character={pinnedImport} />
           </section>
+
+          {pinnedImport.pob && (
+            <section>
+              <MaxHitPanel pob={pinnedImport.pob} />
+            </section>
+          )}
 
           <section>
             <PassiveTreeSummary character={pinnedImport} />
@@ -44,7 +63,10 @@ export function CharacterWorkspace() {
             <SkillsGearPanel character={pinnedImport} />
           </section>
 
-          <LimitsDisclaimer />
+          <LimitsDisclaimer
+            ehpIsEstimate={pinnedImport.ehpIsEstimate}
+            hasPob={Boolean(pinnedImport.pob)}
+          />
 
           <p className="text-xs text-slate-500">
             Imported {new Date(pinnedImport.provenance.fetchedAt).toLocaleString()}{" "}
