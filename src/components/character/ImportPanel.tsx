@@ -68,14 +68,14 @@ export function ImportPanel({
       if (err instanceof NinjaFetchError) {
         if (err.reason === "cors-likely") {
           setError(
-            "Couldn't reach poe.ninja directly or via the fallback CORS proxy (likely blocked). Paste the character JSON below instead — see the instructions there."
+            "Couldn't reach the import service. Paste the character JSON below instead — see the instructions there."
           );
         } else if (err.reason === "not-found") {
           setError(
-            "Character not found. Make sure the profile is public and the URL is correct, or paste the JSON below."
+            `${err.message} You can also paste the character JSON below.`
           );
         } else {
-          setError(`Fetch failed: ${err.message}`);
+          setError(`Import failed: ${err.message} You can also paste the JSON below.`);
         }
       } else {
         setError(

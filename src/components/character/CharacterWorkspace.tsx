@@ -44,7 +44,7 @@ export function CharacterWorkspace() {
             <SkillsGearPanel character={pinnedImport} />
           </section>
 
-          <LimitsDisclaimer />
+          <LimitsDisclaimer ehpIsEstimate={pinnedImport.ehpIsEstimate} />
 
           <p className="text-xs text-slate-500">
             Imported {new Date(pinnedImport.provenance.fetchedAt).toLocaleString()}{" "}
