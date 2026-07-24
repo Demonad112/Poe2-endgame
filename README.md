@@ -20,13 +20,35 @@ Ancients" endgame, built from a community Atlas Tree/Mechanics guide and a
   this tracks *allocation sequence*, not the in-game tree's pixel layout.
 - **Dashboard** (`/dashboard`) — ranked farming strategies, a quick
   strategy-picker quiz, pinnacle boss requirements, and current meta builds.
+- **Character Import** (`/character`) — paste a poe.ninja profile URL to see
+  your character's defenses, resistances, skills, gear, and a build
+  assessment. Real DPS, per-damage-type max-hit-survivable, and crit stats
+  are decoded from the Path of Building export poe.ninja embeds in the
+  character model, so they're PoB's own numbers rather than ours.
 
 Data lives in hand-edited files under `src/data/` — update those when a new
 patch changes the numbers. Records that are unverified or conflict across
 sources are flagged with a `SourceRef` and rendered as a badge in the UI.
 
-All state (checklist progress, Atlas allocation, quiz answers, pinned
-strategy) is stored client-side in `localStorage` — there is no backend.
+All progress state (checklist completion, Atlas allocation, quiz answers,
+pinned strategy, imported character) is stored client-side in
+`localStorage`.
+
+## The poe.ninja proxy
+
+The app itself is a static site, but character import can't talk to
+poe.ninja directly from a browser: poe.ninja blocks cross-origin requests,
+and the first hop of its character API is a Server-Sent Events stream that
+public CORS proxies buffer and choke on. Both problems only exist in the
+browser, so `vercel-proxy/` holds a small serverless function that performs
+the same two-step SSE → model fetch server-side and returns the JSON with
+permissive CORS headers. It forwards only public profile data, requires no
+credentials, and stores nothing.
+
+Its base URL is overridable at build time with
+`NEXT_PUBLIC_NINJA_PROXY_BASE` (no trailing slash). If the proxy is
+unreachable, the UI falls back to letting you paste the character JSON by
+hand, so the feature degrades rather than breaking.
 
 ## Development
 
@@ -44,8 +66,10 @@ npm run build
 ```
 
 This produces a fully static export in `out/` (`output: 'export'` in
-`next.config.ts`) — no Node server or API routes are used anywhere in the
-app, since it's deployed to GitHub Pages.
+`next.config.ts`) — the app has no Node server or API routes of its own,
+since it's deployed to GitHub Pages. The one piece of server-side code in
+this repo is the standalone poe.ninja proxy under `vercel-proxy/`, which is
+deployed separately to Vercel and is not part of the static build.
 
 ## Deployment
 
@@ -58,10 +82,19 @@ workflow file itself).
 
 ## Privacy
 
-This app makes no network calls at runtime and has no backend, analytics,
-or tracking of any kind. All progress (checklist completion, Atlas
-allocation, quiz answers) is stored only in your own browser's
-`localStorage` and never leaves your device.
+There is no analytics or tracking of any kind, and your progress
+(checklist completion, Atlas allocation, quiz answers, and any imported
+character) is stored only in your own browser's `localStorage`.
+
+Browsing the checklist, Atlas planner, and dashboard makes no network calls
+at all. The one exception is **Character Import**: submitting a profile URL
+sends the account, league, and character name from that URL to the
+poe.ninja proxy described above, which fetches your public poe.ninja
+profile and returns it. That request carries no progress data and no
+credentials, and nothing is stored server-side — but it is a network call
+that leaves your device, so it is called out here rather than glossed over.
+If you would rather not make it, the paste-JSON option imports a character
+entirely client-side.
 
 ## License
 
