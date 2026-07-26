@@ -5,6 +5,17 @@ import { auditGear, type GearAudit, type TierUpgrade } from "./gearAudit";
 import type { ModTierTable } from "./modTiers";
 import { RESIST_LABEL, RESIST_STAT_ID } from "./resistanceTiers";
 import {
+  resolvePassives,
+  type PassiveNodeTable,
+  type ResolvedPassives,
+} from "./passiveNodes";
+import {
+  effectivePool,
+  keystoneEffectsOf,
+  NO_KEYSTONE_EFFECTS,
+  type KeystoneEffects,
+} from "./keystoneEffects";
+import {
   CHAOS_CRITICAL,
   DPS_LOW,
   DPS_OK,
@@ -53,6 +64,12 @@ export interface CharacterAnalysis {
   resistances: ResistanceAdvice;
   /** Null until the affix tier table has loaded (or if it failed to). */
   gear: GearAudit | null;
+  /** Null until the passive node table has loaded, or if there are no nodes. */
+  passives: ResolvedPassives | null;
+  /** Corrections implied by allocated keystones. */
+  keystones: KeystoneEffects;
+  /** Defensive pool with keystone conversions applied — not a naive sum. */
+  pool: number;
   /** Ranked, deduplicated, conflict-resolved. */
   actions: Action[];
   /** True when the tier table is still pending, so gear actions may be missing. */
@@ -111,7 +128,8 @@ function scoreUpgrade(
   upgrade: TierUpgrade,
   shortfalls: Map<ResistanceKey, number>,
   cappedOrOver: Set<ResistanceKey>,
-  archetypeMatches: boolean
+  archetypeMatches: boolean,
+  keystones: KeystoneEffects
 ): number | null {
   const resKey = resistanceKeyOf(upgrade.statId);
 
@@ -120,9 +138,24 @@ function scoreUpgrade(
     // wasted currency and at worst directly contradicts the advice to spend
     // that surplus elsewhere. Don't offer it.
     if (cappedOrOver.has(resKey)) return null;
+    // Chaos immunity makes chaos resistance worthless at any tier.
+    if (resKey === "chaos" && keystones.chaosImmune) return null;
     const shortfall = shortfalls.get(resKey) ?? 0;
     return UPGRADE_BASE.shortResistance + Math.min(20, shortfall);
   }
+
+  // A keystone can make a whole stat dead. Suggesting a tier upgrade on a
+  // modifier the build cannot benefit from is the same error as suggesting an
+  // over-capped resistance — currency spent for nothing.
+  //
+  // Only genuinely dead stats are suppressed. Energy shield under Eldritch
+  // Battery is deliberately NOT one of them: it converts to mana rather than
+  // vanishing, so it stops counting as a defensive pool while remaining worth
+  // rolling. Excluding it from the pool is the correction; hiding the upgrade
+  // would be an overcorrection.
+  if (keystones.lifeIsNegligible && /maximum_life|life_regeneration/.test(upgrade.statId))
+    return null;
+  if (keystones.neverCrits && /critical/.test(upgrade.statId)) return null;
 
   let base: number;
   if (LIFE_ES_RE.test(upgrade.statId)) base = UPGRADE_BASE.lifeOrEs;
@@ -145,12 +178,21 @@ function severityFor(score: number): ActionSeverity {
 
 export function analyseCharacter(
   character: ImportedCharacter,
-  table: ModTierTable | null
+  table: ModTierTable | null,
+  passiveTable: PassiveNodeTable | null = null
 ): CharacterAnalysis {
-  const assessment = assessBuild(character);
-  const resistances = analyseResistances(character);
-  const gear = table ? auditGear(character, table) : null;
   const { stats, pob } = character;
+
+  // Keystones come first: several of them invalidate conclusions the rest of
+  // this function would otherwise draw, so nothing below runs without them.
+  const passives = resolvePassives(pob?.allocatedNodes, passiveTable);
+  const keystones = passives
+    ? keystoneEffectsOf(passives.keystones)
+    : NO_KEYSTONE_EFFECTS;
+
+  const assessment = assessBuild(character, keystones);
+  const resistances = analyseResistances(character);
+  const gear = table ? auditGear(character, table, keystones) : null;
 
   const shortfalls = new Map<ResistanceKey, number>();
   const cappedOrOver = new Set<ResistanceKey>();
@@ -199,6 +241,10 @@ export function analyseCharacter(
     ).filter(([, v]) => v > 0);
     const best = hits.reduce((max, [, v]) => Math.max(max, v), 0);
     const atRisk = hits
+      // Chaos immunity makes a low chaos max-hit meaningless — it was the
+      // lowest number on the test character and would otherwise lead the
+      // list on a build that literally cannot take chaos damage.
+      .filter(([type]) => !(keystones.chaosImmune && type === "Chaos"))
       .filter(([, v]) => v < best * ONE_SHOT_RATIO)
       .sort((a, b) => a[1] - b[1]);
 
@@ -226,8 +272,10 @@ export function analyseCharacter(
   }
 
   // --- Chaos resistance -----------------------------------------------------
+  // Skipped entirely under chaos immunity: telling a Chaos Inoculation build
+  // to raise chaos resistance is advice to spend currency on nothing.
   const chaos = resistances.statuses.find((s) => s.type === "chaos");
-  if (chaos && chaos.shortfall > 0) {
+  if (chaos && chaos.shortfall > 0 && !keystones.chaosImmune) {
     const critical = chaos.current < CHAOS_CRITICAL;
     const fix = resistances.suggestions.find((s) =>
       s.title.includes("Chaos Resistance")
@@ -252,13 +300,26 @@ export function analyseCharacter(
   }
 
   // --- Defensive pool -------------------------------------------------------
-  const pool = stats.life + stats.energyShield + stats.ward;
+  // Counts only what actually absorbs hits. A build that converted its energy
+  // shield to mana, or whose maximum life is fixed at 1, does not have the
+  // pool a naive life + ES + ward sum reports — and the error runs in the
+  // dangerous direction, claiming a bigger buffer than exists.
+  const { total: pool, excluded } = effectivePool(stats, keystones);
   if (pool < POOL_THIN) {
+    const onlyOne = keystones.lifeIsNegligible || keystones.esNotDefensive;
+    const growable = keystones.lifeIsNegligible
+      ? "Energy Shield"
+      : keystones.esNotDefensive
+        ? "maximum Life"
+        : "maximum Life or Energy Shield";
     actions.push({
       id: "thin-pool",
-      title: `Grow the life/ES pool — ${pool.toLocaleString()} combined`,
+      title: `Grow the defensive pool — ${pool.toLocaleString()} combined`,
       detail:
-        "Look for maximum Life or Energy Shield on any slot still rolling neither, and on the passive tree.",
+        `Look for ${growable} on any slot still rolling ${onlyOne ? "none" : "neither"}, and on the passive tree.` +
+        (excluded.length > 0
+          ? ` Your ${excluded.join(" and ")} is excluded here — a keystone has converted it away, so it is not absorbing hits.`
+          : ""),
       why: "Resistances scale what you take per hit; the pool decides how many hits you get. Below roughly 4,000 combined, endgame hits leave no margin.",
       severity: "critical",
       score: SCORE.thinPool,
@@ -309,7 +370,13 @@ export function analyseCharacter(
         (gear.archetype === "attack" && !/^spell_|^cast_speed/.test(upgrade.statId)) ||
         (gear.archetype === "spell" && !/^attack_|accuracy_rating/.test(upgrade.statId));
 
-      const score = scoreUpgrade(upgrade, shortfalls, cappedOrOver, archetypeMatches);
+      const score = scoreUpgrade(
+        upgrade,
+        shortfalls,
+        cappedOrOver,
+        archetypeMatches,
+        keystones
+      );
       if (score === null) continue;
 
       actions.push({
@@ -347,6 +414,9 @@ export function analyseCharacter(
     assessment,
     resistances,
     gear,
+    passives,
+    keystones,
+    pool,
     actions,
     gearPending: table === null,
   };

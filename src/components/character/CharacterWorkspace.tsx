@@ -5,6 +5,7 @@ import { SectionTitle } from "@/components/shared/SectionTitle";
 import { Accordion } from "@/components/shared/Accordion";
 import { useCharacterImport } from "@/hooks/useCharacterImport";
 import { useModTiers } from "@/hooks/useModTiers";
+import { usePassiveNodes } from "@/hooks/usePassiveNodes";
 import { analyseCharacter } from "@/lib/characterImport/analysis";
 import { ImportPanel } from "./ImportPanel";
 import { CharacterSummaryCard } from "./CharacterSummaryCard";
@@ -47,8 +48,11 @@ function CountBadge({ n, tone }: { n: number; tone: "warn" | "muted" }) {
 export function CharacterWorkspace() {
   const { pinnedImport, setPinnedImport, clearPinnedImport } =
     useCharacterImport();
-  // Only pay for the affix table once a character is actually on screen.
+  // Only pay for these assets once a character is actually on screen.
   const { table, pending, failed } = useModTiers(Boolean(pinnedImport));
+  const { table: passiveTable, pending: passivesPending } = usePassiveNodes(
+    Boolean(pinnedImport)
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,6 +66,8 @@ export function CharacterWorkspace() {
           key={`${pinnedImport.account}/${pinnedImport.name}`}
           character={pinnedImport}
           table={table}
+          passiveTable={passiveTable}
+          passivesPending={passivesPending}
           tablePending={pending}
           tableFailed={failed}
           onClear={clearPinnedImport}
@@ -74,17 +80,21 @@ export function CharacterWorkspace() {
 function CharacterAnalysis({
   character,
   table,
+  passiveTable,
+  passivesPending,
   tablePending,
   tableFailed,
   onClear,
 }: {
   character: NonNullable<ReturnType<typeof useCharacterImport>["pinnedImport"]>;
   table: Parameters<typeof analyseCharacter>[1];
+  passiveTable: Parameters<typeof analyseCharacter>[2];
+  passivesPending: boolean;
   tablePending: boolean;
   tableFailed: boolean;
   onClear: () => void;
 }) {
-  const analysis = analyseCharacter(character, table);
+  const analysis = analyseCharacter(character, table, passiveTable);
   const { pob } = character;
 
   const uncapped = analysis.resistances.statuses.filter((s) => s.shortfall > 0);
@@ -97,7 +107,7 @@ function CharacterAnalysis({
       id: "assessment",
       title: "Build assessment",
       summary: `Tier ${analysis.assessment.tier} — ${analysis.assessment.note}`,
-      content: <BuildScoreCard character={character} />,
+      content: <BuildScoreCard assessment={analysis.assessment} />,
     },
     ...(pob && pob.combinedDps > 0
       ? [
@@ -112,7 +122,7 @@ function CharacterAnalysis({
     {
       id: "defenses",
       title: "Defenses",
-      summary: `${(character.stats.life + character.stats.energyShield + character.stats.ward).toLocaleString()} combined pool · ${character.ehp.toLocaleString()} EHP${character.ehpIsEstimate ? " (estimate)" : ""}`,
+      summary: `${analysis.pool.toLocaleString()} combined pool · ${character.ehp.toLocaleString()} EHP${character.ehpIsEstimate ? " (estimate)" : ""}`,
       badge: <CountBadge n={uncapped.length} tone="warn" />,
       content: <DefenseStatsPanel character={character} />,
     },
@@ -155,8 +165,18 @@ function CharacterAnalysis({
     {
       id: "passives",
       title: "Passive tree",
-      summary: `${character.passivePointsAllocated} points allocated`,
-      content: <PassiveTreeSummary character={character} />,
+      summary: analysis.passives
+        ? `${character.passivePointsAllocated} points · ${analysis.passives.keystones.length} keystones, ${analysis.passives.notables.length} notables`
+        : `${character.passivePointsAllocated} points allocated`,
+      badge: <CountBadge n={analysis.keystones.notes.length} tone="muted" />,
+      content: (
+        <PassiveTreeSummary
+          character={character}
+          passives={analysis.passives}
+          keystones={analysis.keystones}
+          pending={passivesPending}
+        />
+      ),
     },
     {
       id: "skills-gear",

@@ -10,6 +10,11 @@ import {
   POOL_THIN,
   RES_CAP,
 } from "./thresholds";
+import {
+  effectivePool,
+  NO_KEYSTONE_EFFECTS,
+  type KeystoneEffects,
+} from "./keystoneEffects";
 
 export type Severity = "critical" | "warning";
 
@@ -29,9 +34,12 @@ export interface BuildAssessment {
   dpsUnknown: boolean;
 }
 
-export function assessBuild(character: ImportedCharacter): BuildAssessment {
+export function assessBuild(
+  character: ImportedCharacter,
+  keystones: KeystoneEffects = NO_KEYSTONE_EFFECTS
+): BuildAssessment {
   const { stats, pob } = character;
-  const pool = stats.life + stats.energyShield + stats.ward;
+  const { total: pool } = effectivePool(stats, keystones);
   const elementalCapped =
     stats.fireResistance >= RES_CAP &&
     stats.coldResistance >= RES_CAP &&
@@ -41,13 +49,22 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
   const weaknesses: Weakness[] = [];
 
   // --- Defensive pool ---
+  // Named by what it actually contains: a keystone may have converted life or
+  // energy shield away, in which case calling the total "life + ES + ward"
+  // credits the build with a buffer it does not have.
+  const poolParts = [
+    keystones.lifeIsNegligible ? null : "life",
+    keystones.esNotDefensive ? null : "ES",
+    "ward",
+  ].filter(Boolean);
+  const poolLabel = `combined ${poolParts.join(" + ")}`;
   if (pool > POOL_GOOD) {
     strengths.push(
-      `Healthy defensive pool (${pool.toLocaleString()} combined life + ES + ward)`
+      `Healthy defensive pool (${pool.toLocaleString()} ${poolLabel})`
     );
   } else if (pool < POOL_THIN) {
     weaknesses.push({
-      text: `Thin defensive pool — ${pool.toLocaleString()} combined life + ES + ward`,
+      text: `Thin defensive pool — ${pool.toLocaleString()} ${poolLabel}`,
       severity: "critical",
     });
   }
@@ -71,7 +88,10 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
     });
   }
 
-  if (stats.chaosResistance < CHAOS_CRITICAL) {
+  // Chaos immunity makes any chaos resistance figure moot, high or low.
+  if (keystones.chaosImmune) {
+    strengths.push("Immune to chaos damage and bleeding — chaos resistance is moot");
+  } else if (stats.chaosResistance < CHAOS_CRITICAL) {
     weaknesses.push({
       text: `Negative chaos resistance (${stats.chaosResistance}%)`,
       severity: "critical",
@@ -84,9 +104,17 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
   }
 
   // --- Layered mitigation ---
+  // Under Iron Reflexes evasion has become armour, so it neither avoids hits
+  // nor leaves the build short on armour — both of the judgements below would
+  // otherwise be backwards.
+  const effectiveArmour = keystones.evasionIsArmour
+    ? stats.armour + stats.evasionRating
+    : stats.armour;
   if (stats.evasionRating > 4000) {
     strengths.push(
-      `${stats.evasionRating.toLocaleString()} evasion is a real mitigation layer`
+      keystones.evasionIsArmour
+        ? `${stats.evasionRating.toLocaleString()} evasion converted to armour is a real mitigation layer`
+        : `${stats.evasionRating.toLocaleString()} evasion is a real mitigation layer`
     );
   }
   if (stats.ward > 0) {
@@ -94,7 +122,7 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
       `${stats.ward.toLocaleString()} ward adds a recovering buffer over life/ES`
     );
   }
-  if (stats.armour < 500 && stats.blockChance < 20) {
+  if (effectiveArmour < 500 && stats.blockChance < 20) {
     weaknesses.push({
       text: "Little armour or block — leaning on evasion and resistances alone",
       severity: "warning",
@@ -121,6 +149,7 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
 
     const best = hits.reduce((max, [, v]) => Math.max(max, v), 0);
     const atRisk = hits
+      .filter(([type]) => !(keystones.chaosImmune && type === "Chaos"))
       .filter(([, v]) => v < best * ONE_SHOT_RATIO)
       .sort((a, b) => a[1] - b[1]);
 
@@ -173,7 +202,10 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
   if (pool > POOL_GOOD) defence += 0.3;
   else if (pool >= POOL_THIN) defence += 0.15;
   if (elementalCapped) defence += 0.15;
-  if (stats.chaosResistance >= CHAOS_TARGET) defence += 0.05;
+  // Chaos immunity earns the chaos credit outright — it's strictly better
+  // than any resistance value, so scoring it as a miss would penalise it.
+  if (keystones.chaosImmune || stats.chaosResistance >= CHAOS_TARGET)
+    defence += 0.05;
 
   let offence = 0;
   if (!dpsUnknown) {
