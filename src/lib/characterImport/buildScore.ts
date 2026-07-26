@@ -1,4 +1,15 @@
 import type { ImportedCharacter } from "./types";
+import {
+  CHAOS_CRITICAL,
+  CHAOS_TARGET,
+  DPS_LOW,
+  DPS_OK,
+  DPS_STRONG,
+  ONE_SHOT_RATIO,
+  POOL_GOOD,
+  POOL_THIN,
+  RES_CAP,
+} from "./thresholds";
 
 export type Severity = "critical" | "warning";
 
@@ -18,25 +29,13 @@ export interface BuildAssessment {
   dpsUnknown: boolean;
 }
 
-// Rough endgame DPS bands. These are heuristics, not published benchmarks —
-// no authoritative 0.5 community numbers were available when this was
-// written, so the UI labels them as a rough guide rather than a verdict.
-const DPS_STRONG = 1_000_000;
-const DPS_OK = 300_000;
-const DPS_LOW = 100_000;
-
-// Combined life+ES+ward pool bands, following the thresholds poe2-mcp's
-// ledger used (compute_strengths_weaknesses in mobile-app/api/analyze.py).
-const POOL_GOOD = 6000;
-const POOL_THIN = 4000;
-
 export function assessBuild(character: ImportedCharacter): BuildAssessment {
   const { stats, pob } = character;
   const pool = stats.life + stats.energyShield + stats.ward;
   const elementalCapped =
-    stats.fireResistance >= 75 &&
-    stats.coldResistance >= 75 &&
-    stats.lightningResistance >= 75;
+    stats.fireResistance >= RES_CAP &&
+    stats.coldResistance >= RES_CAP &&
+    stats.lightningResistance >= RES_CAP;
 
   const strengths: string[] = [];
   const weaknesses: Weakness[] = [];
@@ -64,7 +63,7 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
         ["Lightning", stats.lightningResistance],
       ] as const
     )
-      .filter(([, v]) => v < 75)
+      .filter(([, v]) => v < RES_CAP)
       .map(([n, v]) => `${n} ${v}%`);
     weaknesses.push({
       text: `Uncapped elemental resistance (${uncapped.join(", ")})`,
@@ -72,12 +71,12 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
     });
   }
 
-  if (stats.chaosResistance < 0) {
+  if (stats.chaosResistance < CHAOS_CRITICAL) {
     weaknesses.push({
       text: `Negative chaos resistance (${stats.chaosResistance}%)`,
       severity: "critical",
     });
-  } else if (stats.chaosResistance < 30) {
+  } else if (stats.chaosResistance < CHAOS_TARGET) {
     weaknesses.push({
       text: `Low chaos resistance (${stats.chaosResistance}%)`,
       severity: "warning",
@@ -103,43 +102,64 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
   }
 
   // --- One-shot risk (PoB max-hit-taken) ---
-  // The lowest max hit is what actually kills you; a build can look healthy
-  // on paper and still get deleted by its worst damage type.
+  // A build can look healthy on paper and still get deleted by a damage type
+  // it has no answer to. EVERY type under the threshold is reported, not just
+  // the single lowest: on the test character chaos (3,808) and physical
+  // (4,264) both sat under it, and naming only the minimum hid the physical
+  // gap — the more dangerous of the two, since physical hits are far more
+  // common in maps than chaos hits.
   if (pob) {
-    const hits = [
-      ["Physical", pob.maxHitTaken.physical],
-      ["Fire", pob.maxHitTaken.fire],
-      ["Cold", pob.maxHitTaken.cold],
-      ["Lightning", pob.maxHitTaken.lightning],
-      ["Chaos", pob.maxHitTaken.chaos],
-    ].filter(([, v]) => (v as number) > 0) as [string, number][];
+    const hits = (
+      [
+        ["Physical", pob.maxHitTaken.physical],
+        ["Fire", pob.maxHitTaken.fire],
+        ["Cold", pob.maxHitTaken.cold],
+        ["Lightning", pob.maxHitTaken.lightning],
+        ["Chaos", pob.maxHitTaken.chaos],
+      ] as [string, number][]
+    ).filter(([, v]) => v > 0);
 
-    if (hits.length > 0) {
-      const [weakestType, weakestHit] = hits.reduce((a, b) => (a[1] <= b[1] ? a : b));
-      const best = hits.reduce((a, b) => (a[1] >= b[1] ? a : b))[1];
-      if (best > 0 && weakestHit < best * 0.4) {
-        weaknesses.push({
-          text: `${weakestType} is the one-shot risk — max hit survivable is only ${weakestHit.toLocaleString()} vs ${best.toLocaleString()} at best`,
-          severity: "warning",
-        });
-      }
+    const best = hits.reduce((max, [, v]) => Math.max(max, v), 0);
+    const atRisk = hits
+      .filter(([, v]) => v < best * ONE_SHOT_RATIO)
+      .sort((a, b) => a[1] - b[1]);
+
+    if (best > 0 && atRisk.length > 0) {
+      const named = atRisk
+        .map(([type, v]) => `${type} ${v.toLocaleString()}`)
+        .join(", ");
+      weaknesses.push({
+        text:
+          atRisk.length === 1
+            ? `${atRisk[0][0]} is the one-shot risk — max hit survivable is only ${atRisk[0][1].toLocaleString()} vs ${best.toLocaleString()} at best`
+            : `${atRisk.length} one-shot risks — ${named}, against ${best.toLocaleString()} at best`,
+        severity: "warning",
+      });
     }
   }
 
   // --- Offense ---
+  // The DPS figure is whatever the character's PoB export was configured to
+  // produce. On real exports that is typically NOT a boss calculation, so a
+  // verdict about pinnacle bosses can't be drawn from it — the wording below
+  // stays about the number itself, and the UI prints the actual config
+  // alongside it (see pobConfig.ts / describePobConfig).
   const dps = pob?.combinedDps ?? 0;
   const dpsUnknown = !pob || dps <= 0;
+  const versusBoss = pob?.config?.versusBoss ?? false;
   if (!dpsUnknown) {
+    const shown = `${Math.round(dps).toLocaleString()} combined DPS`;
+    const against = versusBoss ? "against a boss" : "against a non-boss enemy";
     if (dps >= DPS_STRONG) {
-      strengths.push(`Strong damage — ${Math.round(dps).toLocaleString()} combined DPS`);
+      strengths.push(`Strong damage — ${shown} ${against}`);
     } else if (dps < DPS_LOW) {
       weaknesses.push({
-        text: `Low damage for endgame — ${Math.round(dps).toLocaleString()} combined DPS`,
+        text: `Low damage for endgame — ${shown} ${against}`,
         severity: "critical",
       });
     } else if (dps < DPS_OK) {
       weaknesses.push({
-        text: `Modest damage — ${Math.round(dps).toLocaleString()} combined DPS may stall on pinnacle bosses`,
+        text: `Modest damage — ${shown} ${against}`,
         severity: "warning",
       });
     }
@@ -153,7 +173,7 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
   if (pool > POOL_GOOD) defence += 0.3;
   else if (pool >= POOL_THIN) defence += 0.15;
   if (elementalCapped) defence += 0.15;
-  if (stats.chaosResistance >= 30) defence += 0.05;
+  if (stats.chaosResistance >= CHAOS_TARGET) defence += 0.05;
 
   let offence = 0;
   if (!dpsUnknown) {
@@ -177,7 +197,9 @@ export function assessBuild(character: ImportedCharacter): BuildAssessment {
     note =
       "Scored on defences only — this character had no Path of Building export to read DPS from.";
   } else if (dps < DPS_OK) {
-    note = "Defences hold up; damage is the weaker half of this build.";
+    note = versusBoss
+      ? "Defences hold up; damage is the weaker half of this build."
+      : "Defences hold up; damage is the weaker half — though this export was not configured against a boss.";
   } else {
     note = "No glaring gaps in defences or damage.";
   }

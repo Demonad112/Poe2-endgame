@@ -1,6 +1,5 @@
 import type { ImportedCharacter } from "@/lib/characterImport/types";
 import { assessBuild } from "@/lib/characterImport/buildScore";
-import { SectionTitle } from "@/components/shared/SectionTitle";
 
 const TIER_STYLES: Record<string, string> = {
   A: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
@@ -18,7 +17,6 @@ export function BuildScoreCard({
 
   return (
     <div className="space-y-4">
-      <SectionTitle>Assessment</SectionTitle>
 
       <div className="flex flex-wrap items-center gap-4 rounded-lg border border-white/10 bg-white/[0.03] p-4">
         <div

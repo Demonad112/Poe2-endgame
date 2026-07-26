@@ -13,6 +13,8 @@ export interface TierUpgrade {
   itemLevel: number;
   /** Readable stat this mod grants, e.g. "maximum Energy Shield". */
   statLabel: string;
+  /** Raw stat id, so consumers can classify without parsing the label. */
+  statId: string;
   affixName: string | null;
   /** Tier as the game displays it, where T1 is the strongest. */
   currentTier: number;
@@ -288,6 +290,7 @@ export function auditGear(
         itemSlot: item.slot,
         itemLevel: item.itemLevel,
         statLabel: labelFor(statId),
+        statId,
         affixName: family.n,
         currentTier: currentDisplay,
         currentValue,

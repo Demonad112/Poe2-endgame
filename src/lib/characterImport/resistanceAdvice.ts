@@ -9,9 +9,7 @@ import {
   type ResistanceType,
 } from "./resistanceTiers";
 
-const RES_CAP = 75;
-/** Below this, chaos resistance is worth actively fixing. */
-const CHAOS_TARGET = 30;
+import { RES_CAP, targetFor } from "./thresholds";
 
 export interface ResistanceStatus {
   type: ResistanceType;
@@ -95,7 +93,7 @@ export function analyseResistances(
     ["fire", "cold", "lightning", "chaos"] as ResistanceType[]
   ).map((type) => {
     const value = current[type];
-    const target = type === "chaos" ? CHAOS_TARGET : RES_CAP;
+    const target = targetFor(type);
     return {
       type,
       current: value,

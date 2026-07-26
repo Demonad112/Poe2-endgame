@@ -80,6 +80,22 @@ export interface DamageTypeBreakdown {
   chaos: number;
 }
 
+/**
+ * The Path of Building configuration the export was saved with — the
+ * assumptions baked into every DPS figure we display. Read from the <Input>
+ * elements under <Calcs>; see pobConfig.ts for why this matters.
+ */
+export interface PobConfig {
+  /** How many config inputs were set. 0 means PoB defaults were used. */
+  inputCount: number;
+  /** Whether the numbers were calculated against a boss. */
+  versusBoss: boolean;
+  /** PoB's buff mode, when set. "effective" assumes all buffs/charges up. */
+  buffMode: "unbuffed" | "combat" | "effective" | null;
+  /** Human-readable damage-relevant conditions assumed true. */
+  conditionals: string[];
+}
+
 // Stats computed by Path of Building itself, decoded from the
 // `pathOfBuildingExport` blob poe.ninja embeds in the character model.
 // These are PoB's numbers, not ours — notably real DPS, which we have no
@@ -103,6 +119,10 @@ export interface PobStats {
   physicalDamageReduction: number;
   spellSuppression: number;
   blockChance: number;
+  /** Allocated passive node ids from PoB's own <Spec>, when present. */
+  allocatedNodes: number[];
+  /** The assumptions the figures above were calculated under. */
+  config: PobConfig;
 }
 
 /**
@@ -111,8 +131,12 @@ export interface PobStats {
  * discarded on load rather than rendered — an out-of-date snapshot is one
  * re-import away, whereas feeding it to code expecting new fields crashed
  * the whole page.
+ *
+ * 4: PobStats gained `config` and `allocatedNodes`. A v3 character has a
+ *    `pob` without them, and the config drives text the UI now always
+ *    renders alongside DPS, so a stale one must not be revived.
  */
-export const CHARACTER_SCHEMA_VERSION = 3;
+export const CHARACTER_SCHEMA_VERSION = 4;
 
 export interface ImportedCharacter {
   schemaVersion: number;

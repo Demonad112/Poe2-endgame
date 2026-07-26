@@ -1,64 +1,53 @@
-"use client";
+import type { GearAudit } from "@/lib/characterImport/gearAudit";
 
-import { useEffect, useState } from "react";
-import type { ImportedCharacter } from "@/lib/characterImport/types";
-import { loadModTiers, type ModTierTable } from "@/lib/characterImport/modTiers";
-import { auditGear } from "@/lib/characterImport/gearAudit";
-import { SectionTitle } from "@/components/shared/SectionTitle";
-
+/**
+ * Presentation only — the audit itself is computed by the shared analysis
+ * pass in analysis.ts, so the ordering here can't drift from the "Fix next"
+ * list. Upgrades are still listed in the audit's own order (which reflects
+ * how far each item sits from its item-level ceiling); which of them is worth
+ * doing first is the ranked list's job, not this panel's.
+ */
 export function GearAuditPanel({
-  character,
+  audit,
+  pending,
+  failed,
 }: {
-  character: ImportedCharacter;
+  audit: GearAudit | null;
+  pending: boolean;
+  failed: boolean;
 }) {
-  // The affix table is a ~210KB asset, so it's fetched on demand rather than
-  // bundled — a genuine side effect, hence a real useEffect.
-  const [table, setTable] = useState<ModTierTable | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadModTiers().then((t) => {
-      if (cancelled) return;
-      if (t) setTable(t);
-      else setFailed(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   if (failed) {
     return (
-      <div>
-        <SectionTitle>Gear audit</SectionTitle>
-        <p className="text-sm text-slate-500">
-          Couldn&apos;t load the affix tier data, so upgrade headroom
-          isn&apos;t available right now.
-        </p>
-      </div>
+      <p className="text-sm text-slate-500">
+        Couldn&apos;t load the affix tier data, so upgrade headroom isn&apos;t
+        available right now.
+      </p>
     );
   }
 
-  if (!table) {
+  if (!audit) {
     return (
-      <div>
-        <SectionTitle>Gear audit</SectionTitle>
-        <p className="text-sm text-slate-500">Loading affix tiers…</p>
-      </div>
+      <p className="text-sm text-slate-500">
+        {pending ? "Loading affix tiers…" : "Affix tiers unavailable."}
+      </p>
     );
   }
 
-  const audit = auditGear(character, table);
   const topUpgrades = audit.upgrades.slice(0, 8);
 
   return (
     <div className="space-y-4">
-      <SectionTitle>Gear audit</SectionTitle>
-
       <p className="text-sm text-slate-400">
         Every rollable modifier on your gear, graded against the best tier its
         item level could roll. {audit.gradedCount} modifiers checked.
+      </p>
+
+      <p className="rounded-md border border-white/10 bg-black/20 p-3 text-xs text-slate-400">
+        T1 is the <em>theoretical</em> best an item level allows, not a
+        realistic crafting target — almost every real item sits several tiers
+        below it on most affixes. Read these as headroom rather than defects,
+        and take the ordering from &ldquo;Fix next&rdquo; above rather than
+        from the size of the gap.
       </p>
 
       {topUpgrades.length === 0 ? (
@@ -135,10 +124,14 @@ export function GearAuditPanel({
           </ul>
         )}
         <p className="mt-2 text-xs text-slate-500">
-          Read as {audit.archetype === "unknown" ? "an unclassified" : `an ${audit.archetype}`} build
-          {audit.weaponType ? ` wielding a ${audit.weaponType}` : ""} — {audit.archetypeBasis}.
-          Only clear-cut mismatches are flagged, and attribute rolls are never
-          flagged since they gate gem requirements.
+          Read as{" "}
+          {audit.archetype === "unknown"
+            ? "an unclassified"
+            : `an ${audit.archetype}`}{" "}
+          build
+          {audit.weaponType ? ` wielding a ${audit.weaponType}` : ""} —{" "}
+          {audit.archetypeBasis}. Only clear-cut mismatches are flagged, and
+          attribute rolls are never flagged since they gate gem requirements.
         </p>
       </div>
     </div>

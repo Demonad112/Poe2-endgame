@@ -1,4 +1,5 @@
 import type { PobStats } from "./types";
+import { readPobConfig } from "./pobConfig";
 
 // poe.ninja embeds a Path of Building export (`charModel.pathOfBuildingExport`)
 // in every character model. It's base64url-encoded, zlib-compressed PoB2 XML —
@@ -67,6 +68,24 @@ function findMainSkill(doc: Document): string | undefined {
   return gem?.getAttribute("nameSpec") ?? undefined;
 }
 
+/**
+ * Passive node ids PoB itself has allocated, from <Spec nodes="...">.
+ *
+ * Worth reading even though poe.ninja supplies its own passive selection:
+ * the two disagree (136 vs 103 on the test character, since PoB's set
+ * includes ascendancy and class-start nodes), and keeping both lets the UI
+ * report the difference instead of presenting one as unqualified truth.
+ */
+function readAllocatedNodes(doc: Document): number[] {
+  const spec = doc.getElementsByTagName("Spec")[0];
+  const raw = spec?.getAttribute("nodes");
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((id) => Number(id.trim()))
+    .filter((id) => Number.isFinite(id) && id > 0);
+}
+
 export async function decodePobStats(
   pobExport: string | undefined
 ): Promise<PobStats | null> {
@@ -110,6 +129,8 @@ export async function decodePobStats(
       physicalDamageReduction: g("PhysicalDamageReduction"),
       spellSuppression: g("EffectiveSpellSuppressionChance"),
       blockChance: g("EffectiveBlockChance"),
+      allocatedNodes: readAllocatedNodes(doc),
+      config: readPobConfig(doc),
     };
   } catch {
     return null;

@@ -1,4 +1,5 @@
 import type { DefensiveStats, PobStats } from "@/lib/characterImport/types";
+import { CHAOS_TARGET, isHealthy, RES_CAP } from "@/lib/characterImport/thresholds";
 
 const RES_FIELDS: {
   key: keyof Pick<
@@ -25,10 +26,14 @@ export function ResistanceBars({
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {RES_FIELDS.map(({ key, overCapKey, label }) => {
         const value = stats[key];
-        // Chaos resistance has no 75% soft cap in PoE2 — "good" here just
-        // means non-negative, unlike the three elemental resistances.
-        const healthy = key === "chaosResistance" ? value >= 0 : value >= 75;
-        const clamped = Math.min(100, Math.max(0, value));
+        // Judged against the SHARED targets, so a bar can't render green
+        // while the assessment calls the same number a weakness and the
+        // advice panel says it's short — which is what 18% chaos used to do.
+        const healthy = isHealthy(overCapKey, value);
+        const target = overCapKey === "chaos" ? CHAOS_TARGET : RES_CAP;
+        // Scale the bar against its own target rather than a flat 100, so
+        // "how close am I" reads the same for chaos as for the elements.
+        const clamped = Math.min(100, Math.max(0, (value / target) * 100));
         // Overcap is headroom against enemy resistance-reduction; worth
         // surfacing because a bare-75% resist can be stripped below cap.
         const overCap = pob?.resistOverCap[overCapKey] ?? 0;
