@@ -73,8 +73,8 @@ export function NavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-20 flex items-center gap-1 border-b border-white/[0.06] bg-black/60 px-4 py-3 backdrop-blur-md">
-      <Link href="/" className="mr-5 flex items-center gap-2">
+    <nav className="sticky top-0 z-20 flex items-center gap-1 border-b border-white/[0.06] bg-black/60 px-3 py-3 backdrop-blur-md sm:px-4">
+      <Link href="/" className="mr-2 flex shrink-0 items-center gap-2 lg:mr-5">
         <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none">
           <path
             d="M12 2 L20 12 L12 22 L4 12 Z"
@@ -84,7 +84,9 @@ export function NavBar() {
           />
           <path d="M12 6 L16 12 L12 18 L8 12 Z" fill="var(--accent)" opacity="0.8" />
         </svg>
-        <span className="text-gradient-gold font-semibold tracking-wide">
+        {/* Full wordmark only where there's room for it alongside the nav —
+            below lg the links themselves take priority. */}
+        <span className="text-gradient-gold hidden font-semibold tracking-wide lg:inline">
           PoE2 Endgame Companion
         </span>
       </Link>
@@ -95,28 +97,37 @@ export function NavBar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+              // Labels are hidden on small screens (four of them plus the
+              // wordmark overflowed a 390px viewport and forced the whole
+              // document to scroll sideways); the icon carries the meaning,
+              // with the label exposed to assistive tech and tooltips.
+              aria-label={link.label}
+              title={link.label}
+              // Taller hit area on touch screens; unchanged on desktop.
+              className={`flex items-center gap-1.5 rounded-md border px-2.5 py-2.5 text-sm font-medium transition-colors sm:px-3 sm:py-1.5 ${
                 active
                   ? "border-[var(--accent)]/30 bg-[var(--accent-soft)] text-[var(--accent)]"
                   : "border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200"
               }`}
             >
               {link.icon}
-              {link.label}
+              <span className="hidden sm:inline">{link.label}</span>
             </Link>
           );
         })}
       </div>
       <button
         onClick={() => window.dispatchEvent(new Event(OPEN_SEARCH_EVENT))}
-        className="ml-auto flex items-center gap-2 rounded-md border border-white/10 px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:border-white/20 hover:text-slate-200"
+        aria-label="Search"
+        className="ml-auto flex shrink-0 items-center gap-2 rounded-md border border-white/10 px-2.5 py-2.5 text-xs text-slate-400 transition-colors hover:border-white/20 hover:text-slate-200 sm:py-1.5"
       >
         <svg viewBox="0 0 20 20" fill="none" className="size-3.5">
           <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
           <path d="M16 16l-3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
         <span className="hidden sm:inline">Search</span>
-        <kbd className="rounded border border-white/15 px-1 py-0.5 font-mono text-[10px] text-slate-500">
+        {/* Keyboard hint is noise on touch devices. */}
+        <kbd className="hidden rounded border border-white/15 px-1 py-0.5 font-mono text-[10px] text-slate-500 sm:inline">
           ⌘K
         </kbd>
       </button>
