@@ -64,7 +64,7 @@ function tierForModLine(
 
 function GearCard({ item }: { item: GearItem }) {
   return (
-    <li className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm">
+    <li className="rounded-md border border-[var(--hairline)] bg-[var(--surface)] p-3 text-sm">
       <p className="flex items-baseline justify-between gap-2 font-medium">
         <span className={`truncate ${RARITY_COLOR[item.rarity] ?? "text-slate-100"}`}>
           {item.name}
@@ -124,7 +124,7 @@ export function SkillsGearPanel({
             {character.skills.map((setup, i) => (
               <li
                 key={i}
-                className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm"
+                className="rounded-md border border-[var(--hairline)] bg-[var(--surface)] p-3 text-sm"
               >
                 <p className="font-medium text-slate-100">
                   {setup.main}{" "}

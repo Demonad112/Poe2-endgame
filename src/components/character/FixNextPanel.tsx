@@ -1,25 +1,22 @@
 import type { Action, ActionSeverity } from "@/lib/characterImport/analysis";
 import { SectionTitle } from "@/components/shared/SectionTitle";
+import { StatusChip, type Tone } from "./Instruments";
 
-const SEVERITY_STYLE: Record<
+const SEVERITY: Record<
   ActionSeverity,
-  { border: string; chip: string; label: string }
+  { stripe: string; tone: Tone; label: string }
 > = {
   critical: {
-    border: "border-red-500/30 bg-red-500/[0.06]",
-    chip: "border-red-500/40 bg-red-500/10 text-red-300",
+    stripe: "bg-[var(--critical)]",
+    tone: "critical",
     label: "Critical",
   },
   important: {
-    border: "border-amber-500/30 bg-amber-500/[0.05]",
-    chip: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+    stripe: "bg-[var(--caution)]",
+    tone: "caution",
     label: "Important",
   },
-  opportunity: {
-    border: "border-white/10 bg-white/[0.03]",
-    chip: "border-white/15 bg-white/5 text-slate-400",
-    label: "Optional",
-  },
+  opportunity: { stripe: "bg-[var(--hairline)]", tone: "muted", label: "Optional" },
 };
 
 /** How many actions to surface before deferring to the panels below. */
@@ -30,6 +27,14 @@ const SHOWN = 5;
  * it presented eight panels of findings at equal weight and left ranking them
  * to the player. Everything here comes from one shared analysis pass, so the
  * ordering is consistent with (and cannot contradict) the detail below.
+ *
+ * Severity is encoded in form as well as colour: a full-height stripe down the
+ * left edge survives a colour-vision deficiency and reads at a glance in
+ * peripheral vision, which a tinted background does not.
+ *
+ * These are numbered because the order genuinely means "do this first". The
+ * accordions below are deliberately not — they're a set of references you jump
+ * between, and numbering them would imply a sequence that isn't real.
  */
 export function FixNextPanel({
   actions,
@@ -46,45 +51,41 @@ export function FixNextPanel({
       <SectionTitle>Fix next</SectionTitle>
 
       {shown.length === 0 ? (
-        <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] p-4 text-sm text-emerald-100/90">
+        <p className="rounded-lg border border-[var(--good)]/25 bg-[var(--good)]/[0.06] p-4 text-sm text-[var(--good)]">
           Nothing stands out as worth fixing — resistances are handled, no
           damage type is a one-shot risk, and no graded modifier is far from
           what its item level allows.
         </p>
       ) : (
-        <ol className="space-y-2">
+        <ol className="flex flex-col gap-1.5">
           {shown.map((action, i) => {
-            const style = SEVERITY_STYLE[action.severity];
+            const sev = SEVERITY[action.severity];
             return (
               <li
                 key={action.id}
-                className={`rounded-lg border p-3 sm:p-4 ${style.border}`}
+                className="grid grid-cols-[3px_1.9rem_1fr] items-start overflow-hidden rounded-lg border border-[var(--hairline)] bg-[var(--surface)] shadow-[var(--lift)]"
               >
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/30 text-xs font-semibold text-slate-300 tabular-nums">
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                      <h3 className="font-semibold text-slate-100">
-                        {action.title}
-                      </h3>
-                      <span
-                        className={`shrink-0 rounded border px-1.5 py-px text-[10px] font-medium tracking-wide uppercase ${style.chip}`}
-                      >
-                        {style.label}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm text-slate-300">
-                      {action.detail}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">{action.why}</p>
-                    <p className="mt-1.5 text-[11px] text-slate-600">
-                      {action.itemSlot ? `${action.itemSlot} · ` : ""}Detail in{" "}
-                      <span className="text-slate-500">{action.evidence}</span>{" "}
-                      below
-                    </p>
+                <span className={`h-full ${sev.stripe}`} aria-hidden="true" />
+                <span className="pt-3 pl-2.5 font-mono text-xs font-bold text-slate-500 tabular-nums">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="min-w-0 py-2.5 pr-4">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h3 className="text-sm font-semibold tracking-tight text-slate-100">
+                      {action.title}
+                    </h3>
+                    <StatusChip tone={sev.tone}>{sev.label}</StatusChip>
                   </div>
+                  <p className="mt-1.5 text-sm leading-relaxed text-slate-300">
+                    {action.detail}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                    {action.why}
+                  </p>
+                  <p className="mt-1.5 text-[11px] text-slate-600">
+                    {action.itemSlot ? `${action.itemSlot} · ` : ""}detail in{" "}
+                    <span className="text-slate-500">{action.evidence}</span>
+                  </p>
                 </div>
               </li>
             );

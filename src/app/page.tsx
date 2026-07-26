@@ -110,7 +110,7 @@ export default function Home() {
           <Link
             key={card.href}
             href={card.href}
-            className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)]/40 hover:bg-white/[0.05] hover:shadow-[0_8px_30px_-8px_rgba(227,179,65,0.25)]"
+            className="group relative overflow-hidden rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-6 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)]/40 hover:bg-white/[0.05] hover:shadow-[0_8px_30px_-8px_rgba(227,179,65,0.25)]"
           >
             <div className="mb-4 flex size-10 items-center justify-center rounded-lg border border-[var(--accent)]/25 bg-[var(--accent-soft)] text-[var(--accent)] transition-transform duration-200 group-hover:scale-110">
               <svg viewBox="0 0 24 24" fill="none" className="size-5">

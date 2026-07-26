@@ -3,9 +3,9 @@ import { ResistanceBars } from "./ResistanceBars";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-white/10 bg-black/20 p-3">
+    <div className="rounded-md border border-[var(--hairline-soft)] bg-[var(--surface-well)] p-3">
       <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-slate-100">{value}</p>
+      <p className="mt-1 text-lg font-semibold tracking-tight text-slate-100 tabular-nums">{value}</p>
     </div>
   );
 }

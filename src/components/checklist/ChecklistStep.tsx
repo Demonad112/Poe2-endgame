@@ -22,7 +22,7 @@ export function ChecklistStep({
       className={`scroll-mt-24 rounded-lg border p-4 transition-all ${
         complete
           ? "border-emerald-500/30 bg-emerald-500/5"
-          : "border-white/10 bg-white/[0.03] hover:border-white/20"
+          : "border-[var(--hairline)] bg-[var(--surface)] hover:border-white/20"
       }`}
     >
       <label className="flex cursor-pointer items-start gap-3">

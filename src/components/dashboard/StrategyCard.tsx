@@ -6,7 +6,7 @@ import { SourceFlag } from "@/components/shared/SourceFlag";
 import { useStrategySelection } from "@/hooks/useStrategySelection";
 
 const TIER_STYLES: Record<string, string> = {
-  low: "text-emerald-400",
+  low: "text-[var(--good)]",
   medium: "text-amber-400",
   high: "text-red-400",
 };
@@ -21,7 +21,7 @@ export function StrategyCard({ strategy }: { strategy: FarmingStrategy }) {
       className={`scroll-mt-24 flex flex-col gap-2 rounded-lg border p-4 transition-all ${
         pinned
           ? "border-[var(--accent)]/40 bg-[var(--accent-soft)] shadow-[0_0_16px_-4px_rgba(227,179,65,0.3)]"
-          : "border-white/10 bg-white/[0.03] hover:border-white/20"
+          : "border-[var(--hairline)] bg-[var(--surface)] hover:border-white/20"
       }`}
     >
       <div className="flex items-start justify-between gap-2">

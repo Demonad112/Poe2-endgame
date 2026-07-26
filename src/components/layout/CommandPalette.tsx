@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { searchIndex, type SearchCategory, type SearchEntry } from "@/lib/searchIndex";
 
 const CATEGORY_COLORS: Record<SearchCategory, string> = {
-  Checklist: "text-emerald-400",
+  Checklist: "text-[var(--good)]",
   Atlas: "text-indigo-300",
   Strategy: "text-[var(--accent)]",
-  Boss: "text-red-300",
+  Boss: "text-[var(--critical)]",
   Build: "text-cyan-300",
-  Mistake: "text-red-300",
+  Mistake: "text-[var(--critical)]",
   Character: "text-[var(--accent)]",
 };
 
@@ -116,7 +116,7 @@ export function CommandPalette() {
             }
           }}
           placeholder="Search steps, strategies, bosses, builds..."
-          className="w-full border-b border-white/10 bg-transparent px-4 py-3.5 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+          className="w-full border-b border-[var(--hairline)] bg-transparent px-4 py-3.5 text-sm text-slate-100 outline-none placeholder:text-slate-500"
         />
         <ul className="max-h-80 overflow-y-auto py-2">
           {results.length === 0 && (

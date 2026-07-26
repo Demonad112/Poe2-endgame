@@ -42,7 +42,7 @@ export function GearAuditPanel({
         item level could roll. {audit.gradedCount} modifiers checked.
       </p>
 
-      <p className="rounded-md border border-white/10 bg-black/20 p-3 text-xs text-slate-400">
+      <p className="rounded-md border border-[var(--hairline-soft)] bg-[var(--surface-well)] p-3 text-xs text-slate-400">
         T1 is the <em>theoretical</em> best an item level allows, not a
         realistic crafting target — almost every real item sits several tiers
         below it on most affixes. Read these as headroom rather than defects,
@@ -51,7 +51,7 @@ export function GearAuditPanel({
       </p>
 
       {topUpgrades.length === 0 ? (
-        <p className="rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] p-3 text-sm text-emerald-100/90">
+        <p className="rounded-lg border border-[var(--good)]/30 bg-[var(--good)]/[0.06] p-3 text-sm text-emerald-100/90">
           No tier upgrades available — every graded modifier is already at the
           best tier its item level allows.
         </p>
@@ -60,7 +60,7 @@ export function GearAuditPanel({
           {topUpgrades.map((u, i) => (
             <li
               key={i}
-              className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
+              className="rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-3"
             >
               <p className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
                 <span className="font-medium text-slate-100">
@@ -110,15 +110,15 @@ export function GearAuditPanel({
             {audit.questionable.map((q, i) => (
               <li
                 key={i}
-                className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 text-sm"
+                className="rounded-lg border border-[var(--caution)]/30 bg-[var(--caution)]/[0.06] p-3 text-sm"
               >
-                <p className="font-medium text-amber-100">
+                <p className="font-medium text-amber-50">
                   {q.text} on {q.itemName}{" "}
                   <span className="text-[11px] font-normal text-slate-500">
                     {q.itemSlot}
                   </span>
                 </p>
-                <p className="mt-0.5 text-amber-100/70">{q.reason}</p>
+                <p className="mt-0.5 text-amber-50/70">{q.reason}</p>
               </li>
             ))}
           </ul>

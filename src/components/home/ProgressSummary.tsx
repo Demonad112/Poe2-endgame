@@ -11,7 +11,7 @@ export function ProgressSummary() {
   const started = completionPercent > 0 || allocationPercent > 0;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+    <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold text-slate-100">
           {started ? "Your progress" : "Track your progress"}

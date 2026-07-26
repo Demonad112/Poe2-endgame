@@ -4,9 +4,9 @@ import { describePobConfig } from "@/lib/characterImport/pobConfig";
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-white/10 bg-black/20 p-3">
+    <div className="rounded-md border border-[var(--hairline-soft)] bg-[var(--surface-well)] p-3">
       <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-slate-100">{value}</p>
+      <p className="mt-1 text-lg font-semibold tracking-tight text-slate-100 tabular-nums">{value}</p>
     </div>
   );
 }
@@ -40,8 +40,8 @@ export function OffensePanel({ pob }: { pob: PobStats }) {
       <p
         className={`rounded-md border p-3 text-xs ${
           pob.config?.versusBoss
-            ? "border-white/10 bg-black/20 text-slate-400"
-            : "border-amber-500/25 bg-amber-500/[0.05] text-amber-100/80"
+            ? "border-[var(--hairline-soft)] bg-[var(--surface-well)] text-slate-400"
+            : "border-[var(--caution)]/30 bg-[var(--caution)]/[0.05] text-amber-50/80"
         }`}
       >
         {describePobConfig(pob.config)}

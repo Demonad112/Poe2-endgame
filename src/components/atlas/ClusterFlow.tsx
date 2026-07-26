@@ -14,7 +14,7 @@ function SectionHeading({
   description?: string;
 }) {
   return (
-    <div className="mb-4 border-b border-white/10 pb-3">
+    <div className="mb-4 border-b border-[var(--hairline)] pb-3">
       <h2 className="flex items-center gap-2.5 text-lg font-semibold text-slate-200">
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-[var(--accent)]/30 bg-[var(--accent-soft)] text-xs font-bold text-[var(--accent)]">
           {step}
