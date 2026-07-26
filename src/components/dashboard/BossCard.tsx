@@ -6,7 +6,7 @@ export function BossCard({ boss }: { boss: PinnacleBoss }) {
   return (
     <div
       id={boss.id}
-      className="scroll-mt-24 flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-white/20"
+      className="scroll-mt-24 flex flex-col gap-2 rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-4 transition-colors hover:border-white/20"
     >
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-semibold text-slate-100">{boss.name}</h3>

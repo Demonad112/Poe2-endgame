@@ -96,7 +96,7 @@ function QuizSelect({
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-white/10 bg-black/30 px-2.5 py-2 text-slate-100 outline-none transition-colors focus:border-[var(--accent)]/50"
+        className="rounded-md border border-[var(--hairline)] bg-[var(--surface-well)] px-2.5 py-2 text-slate-100 outline-none transition-colors focus:border-[var(--accent)]/50"
       >
         <option value="" disabled>
           Choose...

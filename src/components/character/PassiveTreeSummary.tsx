@@ -4,7 +4,7 @@ import type { KeystoneEffects } from "@/lib/characterImport/keystoneEffects";
 
 function NodeChip({ name }: { name: string }) {
   return (
-    <span className="rounded border border-white/10 bg-white/[0.04] px-2 py-0.5 text-xs text-slate-300">
+    <span className="rounded border border-[var(--hairline)] bg-[var(--surface-well)] px-2 py-0.5 text-xs text-slate-300">
       {name}
     </span>
   );
@@ -74,7 +74,7 @@ export function PassiveTreeSummary({
                 {keystones.notes.map((note) => (
                   <li
                     key={note.keystone}
-                    className="rounded-md border border-white/10 bg-black/20 p-3 text-xs"
+                    className="rounded-md border border-[var(--hairline-soft)] bg-[var(--surface-well)] p-3 text-xs"
                   >
                     <span className="font-medium text-slate-300">
                       {note.keystone}:
@@ -126,7 +126,7 @@ export function PassiveTreeSummary({
       {disagree && (
         // Two sources for one number that don't match. Saying so is cheaper
         // than silently picking one and presenting it as fact.
-        <p className="rounded-md border border-white/10 bg-black/20 p-3 text-xs">
+        <p className="rounded-md border border-[var(--hairline-soft)] bg-[var(--surface-well)] p-3 text-xs">
           The Path of Building export lists{" "}
           <span className="text-slate-300">{pobNodes}</span>{" "}
           allocated nodes against poe.ninja&apos;s{" "}

@@ -38,7 +38,7 @@ export function MechanicSubTreeList({ clusters }: { clusters: AtlasCluster[] }) 
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-white/10 bg-black/20 p-1.5">
+      <div className="mb-4 flex flex-wrap gap-1.5 rounded-lg border border-[var(--hairline-soft)] bg-[var(--surface-well)] p-1.5">
         {MECHANICS.map((mechanic) => (
           <button
             key={mechanic}

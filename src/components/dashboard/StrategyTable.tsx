@@ -32,7 +32,7 @@ export function StrategyTable({ strategies }: { strategies: FarmingStrategy[] })
   return (
     <div className="overflow-x-auto rounded-lg border border-white/10">
       <table className="w-full min-w-[720px] text-sm">
-        <thead className="border-b border-white/10 bg-white/[0.04]">
+        <thead className="border-b border-[var(--hairline)] bg-[var(--surface-well)]">
           <tr>
             <th className="px-3 py-2.5 text-left">{headerButton("rank", "Strategy")}</th>
             <th className="px-3 py-2.5 text-left">Mechanics</th>

@@ -123,13 +123,13 @@ export function ImportPanel({
   };
 
   return (
-    <div className="space-y-4 rounded-lg border border-white/10 bg-white/[0.03] p-4">
+    <div className="space-y-4 rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-4">
       <form onSubmit={handleUrlSubmit} className="flex flex-col gap-2 sm:flex-row">
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://poe.ninja/poe2/profile/<account>/<league>/character/<name>"
-          className="flex-1 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus-visible:border-[var(--accent)]/50"
+          className="flex-1 rounded-md border border-[var(--hairline)] bg-[var(--surface-well)] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus-visible:border-[var(--accent)]/50"
         />
         <button
           type="submit"
@@ -141,7 +141,7 @@ export function ImportPanel({
       </form>
 
       {error && (
-        <p className="rounded-md border border-red-500/25 bg-red-500/[0.07] px-3 py-2 text-sm text-red-200">
+        <p className="rounded-md border border-[var(--critical)]/30 bg-[var(--critical)]/[0.07] px-3 py-2 text-sm text-red-100">
           {error}
         </p>
       )}
@@ -168,10 +168,10 @@ export function ImportPanel({
             onChange={(e) => setPasteValue(e.target.value)}
             rows={6}
             placeholder='{"type": "...", "charModel": { ... }}'
-            className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs text-slate-100 outline-none placeholder:text-slate-600 focus-visible:border-[var(--accent)]/50"
+            className="w-full rounded-md border border-[var(--hairline)] bg-[var(--surface-well)] px-3 py-2 font-mono text-xs text-slate-100 outline-none placeholder:text-slate-600 focus-visible:border-[var(--accent)]/50"
           />
           {pasteError && (
-            <p className="rounded-md border border-red-500/25 bg-red-500/[0.07] px-3 py-2 text-sm text-red-200">
+            <p className="rounded-md border border-[var(--critical)]/30 bg-[var(--critical)]/[0.07] px-3 py-2 text-sm text-red-100">
               {pasteError}
             </p>
           )}

@@ -1,8 +1,8 @@
 import type { SourceRef } from "@/lib/types";
 
 const STYLES: Record<string, string> = {
-  unverified: "bg-amber-500/20 text-amber-300 border-amber-500/40",
-  conflicting: "bg-red-500/20 text-red-300 border-red-500/40",
+  unverified: "bg-amber-500/20 text-[var(--caution)] border-amber-500/40",
+  conflicting: "bg-red-500/20 text-[var(--critical)] border-red-500/40",
 };
 
 const LABELS: Record<string, string> = {

@@ -20,14 +20,14 @@ export function ResistanceAdvicePanel({
               key={s.type}
               className={`rounded-md border p-3 ${
                 good
-                  ? "border-emerald-500/25 bg-emerald-500/[0.05]"
-                  : "border-red-500/25 bg-red-500/[0.06]"
+                  ? "border-[var(--good)]/30 bg-[var(--good)]/[0.05]"
+                  : "border-[var(--critical)]/30 bg-[var(--critical)]/[0.06]"
               }`}
             >
               <p className="flex items-baseline justify-between text-xs text-slate-400">
                 <span>{RESIST_LABEL[s.type]}</span>
                 <span
-                  className={`text-base font-semibold ${good ? "text-emerald-300" : "text-red-300"}`}
+                  className={`text-base font-semibold ${good ? "text-[var(--good)]" : "text-[var(--critical)]"}`}
                 >
                   {s.current}%
                 </span>
@@ -61,7 +61,7 @@ export function ResistanceAdvicePanel({
               key={i}
               className={`rounded-lg border p-3 ${
                 s.severity === "critical"
-                  ? "border-red-500/25 bg-red-500/[0.06]"
+                  ? "border-[var(--critical)]/30 bg-[var(--critical)]/[0.06]"
                   : "border-[var(--accent)]/25 bg-[var(--accent-soft)]"
               }`}
             >

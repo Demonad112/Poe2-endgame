@@ -7,7 +7,7 @@ export function ChecklistProgressHeader() {
   const { completionPercent } = useChecklistState();
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+    <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-4">
       <ProgressBar percent={completionPercent} label="Overall progression" />
     </div>
   );

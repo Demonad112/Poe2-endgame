@@ -1,10 +1,10 @@
 import type { BuildAssessment } from "@/lib/characterImport/buildScore";
 
 const TIER_STYLES: Record<string, string> = {
-  A: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+  A: "border-[var(--good)]/45 bg-[var(--good)]/10 text-[var(--good)]",
   B: "border-[var(--accent)]/40 bg-[var(--accent-soft)] text-[var(--accent)]",
-  C: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-  D: "border-red-500/40 bg-red-500/10 text-red-300",
+  C: "border-[var(--caution)]/45 bg-[var(--caution)]/10 text-[var(--caution)]",
+  D: "border-[var(--critical)]/45 bg-[var(--critical)]/10 text-[var(--critical)]",
 };
 
 export function BuildScoreCard({
@@ -16,7 +16,7 @@ export function BuildScoreCard({
   return (
     <div className="space-y-4">
 
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-white/10 bg-white/[0.03] p-4">
+      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-4">
         <div
           className={`flex size-16 shrink-0 items-center justify-center rounded-lg border text-3xl font-bold ${TIER_STYLES[assessment.tier]}`}
         >
@@ -36,14 +36,14 @@ export function BuildScoreCard({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-emerald-300">
+          <h3 className="mb-2 text-sm font-semibold text-[var(--good)]">
             Strengths
           </h3>
           <ul className="space-y-1.5">
             {assessment.strengths.map((s) => (
               <li
                 key={s}
-                className="rounded-md border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2 text-sm text-emerald-100/90"
+                className="rounded-md border border-[var(--good)]/25 bg-[var(--good)]/[0.06] px-3 py-2 text-sm text-emerald-100/90"
               >
                 {s}
               </li>
@@ -51,7 +51,7 @@ export function BuildScoreCard({
           </ul>
         </div>
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-red-300">
+          <h3 className="mb-2 text-sm font-semibold text-[var(--critical)]">
             Weaknesses
           </h3>
           <ul className="space-y-1.5">
@@ -60,8 +60,8 @@ export function BuildScoreCard({
                 key={w.text}
                 className={`rounded-md border px-3 py-2 text-sm ${
                   w.severity === "critical"
-                    ? "border-red-500/25 bg-red-500/[0.07] text-red-100/90"
-                    : "border-amber-500/25 bg-amber-500/[0.06] text-amber-100/90"
+                    ? "border-[var(--critical)]/30 bg-[var(--critical)]/[0.07] text-red-100/90"
+                    : "border-[var(--caution)]/30 bg-[var(--caution)]/[0.06] text-amber-50/90"
                 }`}
               >
                 {w.text}

@@ -7,6 +7,8 @@ import { useCharacterImport } from "@/hooks/useCharacterImport";
 import { useModTiers } from "@/hooks/useModTiers";
 import { usePassiveNodes } from "@/hooks/usePassiveNodes";
 import { analyseCharacter } from "@/lib/characterImport/analysis";
+import { RESIST_LABEL } from "@/lib/characterImport/resistanceTiers";
+import { ONE_SHOT_RATIO } from "@/lib/characterImport/thresholds";
 import { ImportPanel } from "./ImportPanel";
 import { CharacterSummaryCard } from "./CharacterSummaryCard";
 import { FixNextPanel } from "./FixNextPanel";
@@ -20,28 +22,39 @@ import { PassiveTreeSummary } from "./PassiveTreeSummary";
 import { SkillsGearPanel } from "./SkillsGearPanel";
 import { LimitsDisclaimer } from "./LimitsDisclaimer";
 import { formatCompact } from "@/lib/characterImport/format";
+import { PanelControls } from "./PanelControls";
+import {
+  DangerBar,
+  NumberReadout,
+  ResistancePips,
+  StatusChip,
+} from "./Instruments";
 
 interface Panel {
   id: string;
   title: string;
   summary?: ReactNode;
   badge?: ReactNode;
+  instrument?: ReactNode;
   defaultOpen?: boolean;
   content: ReactNode;
 }
 
-function CountBadge({ n, tone }: { n: number; tone: "warn" | "muted" }) {
+function CountBadge({
+  n,
+  tone,
+  suffix,
+}: {
+  n: number;
+  tone: "critical" | "caution" | "muted";
+  suffix?: string;
+}) {
   if (n <= 0) return null;
   return (
-    <span
-      className={`rounded border px-1.5 py-px text-[10px] font-medium ${
-        tone === "warn"
-          ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-          : "border-white/15 bg-white/5 text-slate-400"
-      }`}
-    >
+    <StatusChip tone={tone}>
       {n}
-    </span>
+      {suffix ? ` ${suffix}` : ""}
+    </StatusChip>
   );
 }
 
@@ -97,7 +110,36 @@ function CharacterAnalysis({
   const analysis = analyseCharacter(character, table, passiveTable);
   const { pob } = character;
 
-  const uncapped = analysis.resistances.statuses.filter((s) => s.shortfall > 0);
+  // Only the three elements have a cap to be under. Chaos has no cap in PoE2 —
+  // its shortfall is measured against a judgement-call target — so counting it
+  // here would report "2 uncapped" for a character with one uncapped element.
+  const uncapped = analysis.resistances.statuses.filter(
+    (s) => s.type !== "chaos" && s.shortfall > 0
+  );
+
+  // Same figures the Max hit panel renders, so the collapsed readout and the
+  // open panel can never disagree about what is at risk.
+  const maxHit = (() => {
+    if (!pob) return null;
+    const hits = (
+      [
+        ["Physical", pob.maxHitTaken.physical],
+        ["Fire", pob.maxHitTaken.fire],
+        ["Cold", pob.maxHitTaken.cold],
+        ["Lightning", pob.maxHitTaken.lightning],
+        ["Chaos", pob.maxHitTaken.chaos],
+      ] as [string, number][]
+    ).filter(([, v]) => v > 0);
+    if (hits.length === 0) return null;
+    const best = hits.reduce((m, [, v]) => Math.max(m, v), 0);
+    const [weakestLabel, weakest] = hits.reduce((a, b) => (a[1] <= b[1] ? a : b));
+    return {
+      best,
+      weakest,
+      weakestLabel,
+      atRisk: hits.filter(([, v]) => v < best * ONE_SHOT_RATIO).length,
+    };
+  })();
 
   // Declared as data so the presentation can change in one place — swapping
   // these accordions for a tab strip means changing only the renderer below,
@@ -106,7 +148,22 @@ function CharacterAnalysis({
     {
       id: "assessment",
       title: "Build assessment",
-      summary: `Tier ${analysis.assessment.tier} — ${analysis.assessment.note}`,
+      summary: analysis.assessment.note,
+      instrument: (
+        <StatusChip
+          tone={
+            analysis.assessment.tier === "A"
+              ? "good"
+              : analysis.assessment.tier === "B"
+                ? "accent"
+                : analysis.assessment.tier === "C"
+                  ? "caution"
+                  : "critical"
+          }
+        >
+          Tier {analysis.assessment.tier}
+        </StatusChip>
+      ),
       content: <BuildScoreCard assessment={analysis.assessment} />,
     },
     ...(pob && pob.combinedDps > 0
@@ -114,7 +171,20 @@ function CharacterAnalysis({
           {
             id: "offense",
             title: "Offense",
-            summary: `${formatCompact(pob.combinedDps)} combined DPS${pob.mainSkill ? ` — ${pob.mainSkill}` : ""}`,
+            summary: [
+              pob.mainSkill,
+              `${pob.speed.toFixed(2)}/s`,
+              `${pob.critChance.toFixed(1)}% crit`,
+              pob.config?.versusBoss ? "vs boss" : "not vs boss",
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            instrument: (
+              <NumberReadout
+                value={formatCompact(pob.combinedDps)}
+                tone="accent"
+              />
+            ),
             content: <OffensePanel pob={pob} />,
           },
         ]
@@ -123,7 +193,10 @@ function CharacterAnalysis({
       id: "defenses",
       title: "Defenses",
       summary: `${analysis.pool.toLocaleString()} combined pool · ${character.ehp.toLocaleString()} EHP${character.ehpIsEstimate ? " (estimate)" : ""}`,
-      badge: <CountBadge n={uncapped.length} tone="warn" />,
+      badge: (
+        <CountBadge n={uncapped.length} tone="critical" suffix="uncapped" />
+      ),
+      instrument: <ResistancePips statuses={analysis.resistances.statuses} />,
       content: <DefenseStatsPanel character={character} />,
     },
     ...(pob
@@ -131,7 +204,15 @@ function CharacterAnalysis({
           {
             id: "max-hit",
             title: "Max hit survivable",
-            summary: "Largest single hit absorbed, per damage type",
+            summary: maxHit
+              ? `Weakest: ${maxHit.weakestLabel} ${maxHit.weakest.toLocaleString()}`
+              : "Largest single hit absorbed, per damage type",
+            badge: maxHit ? (
+              <CountBadge n={maxHit.atRisk} tone="critical" suffix="at risk" />
+            ) : undefined,
+            instrument: maxHit ? (
+              <DangerBar weakest={maxHit.weakest} best={maxHit.best} />
+            ) : undefined,
             content: <MaxHitPanel pob={pob} />,
           },
         ]
@@ -139,9 +220,21 @@ function CharacterAnalysis({
     {
       id: "resistances",
       title: "Resistance tuning",
-      summary: "Where each resistance comes from, and what to change",
-      badge: (
-        <CountBadge n={analysis.resistances.suggestions.length} tone="muted" />
+      summary: analysis.resistances.statuses
+        .map((r) =>
+          r.shortfall > 0
+            ? `${RESIST_LABEL[r.type]} ${r.shortfall} short`
+            : r.overCap > 0
+              ? `${RESIST_LABEL[r.type]} +${r.overCap}`
+              : `${RESIST_LABEL[r.type]} ok`
+        )
+        .join(" · "),
+      instrument: (
+        <CountBadge
+          n={analysis.resistances.suggestions.length}
+          tone="muted"
+          suffix="actions"
+        />
       ),
       content: <ResistanceAdvicePanel character={character} />,
     },
@@ -153,7 +246,13 @@ function CharacterAnalysis({
         : tableFailed
           ? "Affix tier data unavailable"
           : "Loading affix tiers…",
-      badge: <CountBadge n={analysis.gear?.questionable.length ?? 0} tone="warn" />,
+      instrument: (
+        <CountBadge
+          n={analysis.gear?.questionable.length ?? 0}
+          tone="caution"
+          suffix="not helping"
+        />
+      ),
       content: (
         <GearAuditPanel
           audit={analysis.gear}
@@ -166,9 +265,19 @@ function CharacterAnalysis({
       id: "passives",
       title: "Passive tree",
       summary: analysis.passives
-        ? `${character.passivePointsAllocated} points · ${analysis.passives.keystones.length} keystones, ${analysis.passives.notables.length} notables`
+        ? [
+            character.ascendancy,
+            `${analysis.passives.notables.length} notables`,
+            analysis.passives.keystones.length > 0
+              ? `${analysis.passives.keystones.length} keystones`
+              : "no keystones",
+          ]
+            .filter(Boolean)
+            .join(" · ")
         : `${character.passivePointsAllocated} points allocated`,
-      badge: <CountBadge n={analysis.keystones.notes.length} tone="muted" />,
+      instrument: (
+        <NumberReadout value={String(character.passivePointsAllocated)} />
+      ),
       content: (
         <PassiveTreeSummary
           character={character}
@@ -182,12 +291,19 @@ function CharacterAnalysis({
       id: "skills-gear",
       title: "Skills & gear",
       summary: `${character.skills.length} skill setup${character.skills.length === 1 ? "" : "s"} · ${character.gear.length} items, every modifier`,
+      instrument: pob?.mainSkill ? (
+        <StatusChip>{pob.mainSkill}</StatusChip>
+      ) : undefined,
       content: <SkillsGearPanel character={character} />,
     },
     {
       id: "limits",
       title: "Where these numbers come from",
       summary: "Sources, assumptions and known limits",
+      instrument:
+        pob && !pob.config?.versusBoss ? (
+          <StatusChip>Not vs boss</StatusChip>
+        ) : undefined,
       content: (
         <LimitsDisclaimer
           ehpIsEstimate={character.ehpIsEstimate}
@@ -200,15 +316,12 @@ function CharacterAnalysis({
 
   return (
     <>
-      <section className="flex items-start gap-4">
-        <CharacterSummaryCard character={character} />
-        <button
-          onClick={onClear}
-          className="shrink-0 rounded-md border border-white/10 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:border-white/20 hover:text-slate-200"
-        >
-          Clear
-        </button>
-      </section>
+      <CharacterSummaryCard
+        character={character}
+        assessment={analysis.assessment}
+        pool={analysis.pool}
+        onClear={onClear}
+      />
 
       <section>
         <FixNextPanel
@@ -217,20 +330,26 @@ function CharacterAnalysis({
         />
       </section>
 
-      <section className="space-y-2">
-        <SectionTitle>Full analysis</SectionTitle>
-        {panels.map((panel) => (
-          <Accordion
-            key={panel.id}
-            id={panel.id}
-            title={panel.title}
-            summary={panel.summary}
-            badge={panel.badge}
-            defaultOpen={panel.defaultOpen}
-          >
-            {panel.content}
-          </Accordion>
-        ))}
+      <section>
+        <SectionTitle>
+          Full analysis
+          <PanelControls targetId="full-analysis" />
+        </SectionTitle>
+        <div id="full-analysis" className="flex flex-col gap-1.5">
+          {panels.map((panel) => (
+            <Accordion
+              key={panel.id}
+              id={panel.id}
+              title={panel.title}
+              summary={panel.summary}
+              badge={panel.badge}
+              instrument={panel.instrument}
+              defaultOpen={panel.defaultOpen}
+            >
+              {panel.content}
+            </Accordion>
+          ))}
+        </div>
       </section>
 
       <p className="text-xs text-slate-500">
