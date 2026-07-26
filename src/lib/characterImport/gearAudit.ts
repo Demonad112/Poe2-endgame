@@ -1,6 +1,7 @@
 import type { GearItem, ImportedCharacter, StructuredMod } from "./types";
 import {
   bestRowForIlvl,
+  displayTierOf,
   rowForTier,
   splitModId,
   type ModTierTable,
@@ -13,8 +14,10 @@ export interface TierUpgrade {
   /** Readable stat this mod grants, e.g. "maximum Energy Shield". */
   statLabel: string;
   affixName: string | null;
+  /** Tier as the game displays it, where T1 is the strongest. */
   currentTier: number;
   currentValue: number;
+  /** Best displayed tier this item level can reach (lower is better). */
   bestTier: number;
   bestMin: number;
   bestMax: number;
@@ -268,6 +271,9 @@ export function auditGear(
       if (!currentRow || !bestRow) continue;
       gradedCount += 1;
       if (bestRow.t <= split.tier) continue;
+      const currentDisplay = displayTierOf(family, currentRow);
+      const bestDisplay = displayTierOf(family, bestRow);
+      if (bestDisplay >= currentDisplay) continue;
 
       // Report against the mod's primary stat, matched by id where possible.
       const primary =
@@ -283,9 +289,9 @@ export function auditGear(
         itemLevel: item.itemLevel,
         statLabel: labelFor(statId),
         affixName: family.n,
-        currentTier: split.tier,
+        currentTier: currentDisplay,
         currentValue,
-        bestTier: bestRow.t,
+        bestTier: bestDisplay,
         bestMin,
         bestMax,
         gainMax: bestMax - currentValue,
@@ -297,7 +303,7 @@ export function auditGear(
   upgrades.sort(
     (a, b) =>
       a.priority - b.priority ||
-      b.bestTier - b.currentTier - (a.bestTier - a.currentTier)
+      b.currentTier - b.bestTier - (a.currentTier - a.bestTier)
   );
   return {
     archetype,

@@ -3,6 +3,7 @@ import {
   RESIST_LABEL,
   RESIST_SUFFIX_NAME,
   bestTierForIlvl,
+  displayTier,
   slotCanRollResistance,
   tierByNumber,
   type ResistanceType,
@@ -120,10 +121,16 @@ export function analyseResistances(
           const best = bestTierForIlvl(status.type, item.itemLevel);
           const currentTier = tierByNumber(status.type, grant.tier);
           if (!best || !currentTier || best.tier <= grant.tier) return null;
+          const curDisplay = displayTier(status.type, grant.tier);
+          const bestDisplay = displayTier(status.type, best.tier);
+          if (curDisplay === null || bestDisplay === null || bestDisplay >= curDisplay)
+            return null;
           return {
             item,
             grant,
             best,
+            curDisplay,
+            bestDisplay,
             // Worst-case gain from moving to the better tier at its floor.
             minGain: best.min - grant.value,
             maxGain: best.max - grant.value,
@@ -140,10 +147,10 @@ export function analyseResistances(
           itemName: c.item.name,
           itemSlot: c.item.slot,
           severity: "critical",
-          title: `Raise ${label} Resistance on ${c.item.name} to T${c.best.tier}`,
+          title: `Raise ${label} Resistance on ${c.item.name} to T${c.bestDisplay}`,
           detail:
-            `It currently rolls T${c.grant.tier} at +${c.grant.value}%. At item level ${c.item.itemLevel} ` +
-            `this slot can roll T${c.best.tier} (+${c.best.min}–${c.best.max}%), a gain of ` +
+            `It currently rolls T${c.curDisplay} at +${c.grant.value}%. At item level ${c.item.itemLevel} ` +
+            `this slot can roll T${c.bestDisplay} (+${c.best.min}–${c.best.max}%), a gain of ` +
             `+${c.minGain}–${c.maxGain}%. You need +${status.shortfall}% to cap ${label}` +
             (enough
               ? ", so even the worst roll of that tier closes the gap."
@@ -170,7 +177,7 @@ export function analyseResistances(
           title: `No ${RESIST_LABEL[status.type]} Resistance anywhere on your gear`,
           detail: best && host
             ? `You're ${status.shortfall}% short. Your highest-level piece that can host one is ${host.name} ` +
-              `(item level ${host.itemLevel}), which can roll T${best.tier} "${RESIST_SUFFIX_NAME[status.type]}" ` +
+              `(item level ${host.itemLevel}), which can roll T${displayTier(status.type, best.tier) ?? best.tier} "${RESIST_SUFFIX_NAME[status.type]}" ` +
               `at +${best.min}–${best.max}%` +
               (best.min >= status.shortfall ? " — enough on its own." : ".")
             : `You're ${status.shortfall}% short and no equipped item supplies it.`,
@@ -214,7 +221,7 @@ export function analyseResistances(
                 `switching to an equivalent base whose implicit grants ${needList}.`
               : best
                 ? `Re-rolling that suffix to ${RESIST_LABEL[target.type]} Resistance at item level ` +
-                  `${item.itemLevel} lands T${best.tier} (+${best.min}–${best.max}%).`
+                  `${item.itemLevel} lands T${displayTier(target.type, best.tier) ?? best.tier} (+${best.min}–${best.max}%).`
                 : `Re-roll it to ${RESIST_LABEL[target.type]} Resistance.`),
         });
       } else {
