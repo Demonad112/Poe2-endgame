@@ -1,4 +1,5 @@
 import type { GearItem, ImportedCharacter, StructuredMod } from "./types";
+import { NO_KEYSTONE_EFFECTS, type KeystoneEffects } from "./keystoneEffects";
 import {
   bestRowForIlvl,
   displayTierOf,
@@ -13,6 +14,8 @@ export interface TierUpgrade {
   itemLevel: number;
   /** Readable stat this mod grants, e.g. "maximum Energy Shield". */
   statLabel: string;
+  /** Raw stat id, so consumers can classify without parsing the label. */
+  statId: string;
   affixName: string | null;
   /** Tier as the game displays it, where T1 is the strongest. */
   currentTier: number;
@@ -203,7 +206,8 @@ function detectArchetype(
 
 export function auditGear(
   character: ImportedCharacter,
-  table: ModTierTable
+  table: ModTierTable,
+  keystones: KeystoneEffects = NO_KEYSTONE_EFFECTS
 ): GearAudit {
   const { archetype, basis } = detectArchetype(character);
   const weaponType = detectWeapon(character.gear);
@@ -216,6 +220,18 @@ export function auditGear(
     // their (often much lower) item levels produce large but irrelevant tier
     // gaps that would crowd out the gear actually in use.
     if (/\(Swap\)/i.test(item.slot)) continue;
+
+    // Necromantic Talisman redirects the entire amulet, so flag the item once
+    // rather than repeating the same reason for every modifier on it.
+    if (keystones.amuletToMinions && item.slot === "Amulet") {
+      questionable.push({
+        itemName: item.name,
+        itemSlot: item.slot,
+        text: "Every modifier on this amulet",
+        reason:
+          "Necromantic Talisman applies all amulet bonuses to your minions instead of you.",
+      });
+    }
 
     for (const mod of item.structuredMods ?? []) {
       const statIds = Object.keys(mod.stats);
@@ -258,6 +274,42 @@ export function auditGear(
             reason: "Only affects minions.",
           });
         }
+
+        // --- Keystone-driven dead modifiers ---
+        // These are certainties rather than inferences: the keystone's own
+        // text says the modifier cannot do anything.
+        if (keystones.neverCrits && /critical/.test(statId)) {
+          questionable.push({
+            itemName: item.name,
+            itemSlot: item.slot,
+            text: labelFor(statId),
+            reason:
+              "Resolute Technique means you never deal critical hits, so this does nothing.",
+          });
+        }
+        if (
+          keystones.fireOnly &&
+          /added_(cold|lightning|chaos)_damage|(cold|lightning|chaos)_damage_\+%/.test(
+            statId
+          )
+        ) {
+          questionable.push({
+            itemName: item.name,
+            itemSlot: item.slot,
+            text: labelFor(statId),
+            reason:
+              "Avatar of Fire means you deal no non-fire damage, so this does nothing.",
+          });
+        }
+        if (keystones.chaosImmune && /base_maximum_life|life_regeneration/.test(statId)) {
+          questionable.push({
+            itemName: item.name,
+            itemSlot: item.slot,
+            text: labelFor(statId),
+            reason:
+              "Chaos Inoculation fixes maximum life at 1, so life modifiers do nothing.",
+          });
+        }
       }
 
       // --- Tier headroom ---
@@ -288,6 +340,7 @@ export function auditGear(
         itemSlot: item.slot,
         itemLevel: item.itemLevel,
         statLabel: labelFor(statId),
+        statId,
         affixName: family.n,
         currentTier: currentDisplay,
         currentValue,

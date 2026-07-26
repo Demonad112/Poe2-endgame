@@ -1,7 +1,6 @@
 import type { ImportedCharacter } from "@/lib/characterImport/types";
 import { analyseResistances } from "@/lib/characterImport/resistanceAdvice";
 import { RESIST_LABEL } from "@/lib/characterImport/resistanceTiers";
-import { SectionTitle } from "@/components/shared/SectionTitle";
 
 export function ResistanceAdvicePanel({
   character,
@@ -12,7 +11,6 @@ export function ResistanceAdvicePanel({
 
   return (
     <div className="space-y-4">
-      <SectionTitle>Resistance tuning</SectionTitle>
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {statuses.map((s) => {

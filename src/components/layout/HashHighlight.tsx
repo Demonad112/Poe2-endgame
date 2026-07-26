@@ -11,6 +11,15 @@ function tryHighlight() {
   const attempt = () => {
     const el = document.getElementById(hash);
     if (el) {
+      // The character page nests its detail panels in collapsed <details>
+      // accordions, so a target can exist while being invisible. Open every
+      // ancestor (and the target itself, when it *is* the accordion) before
+      // scrolling, or the jump lands on a closed summary with no highlight.
+      let node: HTMLElement | null = el;
+      while (node) {
+        if (node instanceof HTMLDetailsElement) node.open = true;
+        node = node.parentElement;
+      }
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       el.classList.remove("search-highlight");
       void el.offsetWidth; // restart animation if the same target is hit twice

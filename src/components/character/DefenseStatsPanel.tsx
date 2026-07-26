@@ -1,6 +1,5 @@
 import type { ImportedCharacter } from "@/lib/characterImport/types";
 import { ResistanceBars } from "./ResistanceBars";
-import { SectionTitle } from "@/components/shared/SectionTitle";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -21,7 +20,6 @@ export function DefenseStatsPanel({
 
   return (
     <div className="space-y-4">
-      <SectionTitle>Defenses</SectionTitle>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Stat label="Life" value={stats.life.toLocaleString()} />
         <Stat label="Energy Shield" value={stats.energyShield.toLocaleString()} />
