@@ -3,9 +3,12 @@ import type {
   GearItem,
   ImportedCharacter,
   ImportProvenance,
+  ModCategory,
+  ResistanceGrant,
   SkillSetup,
 } from "./types";
 import { estimateEhp } from "./ehpEstimate";
+import { RESIST_STAT_ID, tierFromModId } from "./resistanceTiers";
 
 // PoE2 ascendancy -> base class. poe.ninja's charModel `class` field carries
 // the ASCENDANCY name ("Deadeye") once a character has ascended, not the
@@ -161,12 +164,63 @@ function normalizeSkills(raw: unknown): SkillSetup[] {
   return out;
 }
 
-function modsFrom(itemData: Record<string, unknown>): string[] {
-  const collect = (key: string): string[] => {
+// poe.ninja wraps in-game keywords as "[Key|Display Text]" (or plain
+// "[Text]") so the site can link them. Strip to the display half.
+function cleanModText(text: string): string {
+  return text.replace(/\[([^\]|]+)\|([^\]]+)\]/g, "$2").replace(/\[([^\]]+)\]/g, "$1");
+}
+
+const MOD_TEXT_KEYS: [string, ModCategory][] = [
+  ["implicitMods", "implicit"],
+  ["enchantMods", "enchant"],
+  ["runeMods", "rune"],
+  ["explicitMods", "explicit"],
+  ["craftedMods", "crafted"],
+  ["desecratedMods", "desecrated"],
+];
+
+function modsFrom(
+  itemData: Record<string, unknown>
+): { category: ModCategory; text: string }[] {
+  const out: { category: ModCategory; text: string }[] = [];
+  for (const [key, category] of MOD_TEXT_KEYS) {
     const v = itemData[key];
-    return Array.isArray(v) ? v.filter((m): m is string => typeof m === "string") : [];
-  };
-  return [...collect("implicitMods"), ...collect("explicitMods")];
+    if (!Array.isArray(v)) continue;
+    for (const line of v) {
+      if (typeof line === "string" && line.trim()) {
+        out.push({ category, text: cleanModText(line) });
+      }
+    }
+  }
+  return out;
+}
+
+// The `mods` object carries the structured form the display strings lack:
+// a mod id (whose numeric suffix is its tier) and the stat values it grants.
+// That's what makes real tier analysis possible.
+function resistancesFrom(itemData: Record<string, unknown>): ResistanceGrant[] {
+  const modsObj = asRecord(itemData.mods);
+  const out: ResistanceGrant[] = [];
+  for (const [category, arr] of Object.entries(modsObj)) {
+    if (!Array.isArray(arr)) continue;
+    for (const entry of arr) {
+      const mod = asRecord(entry);
+      const modId = str(mod, "id") ?? "";
+      const stats = asRecord(mod.stats);
+      for (const [statId, rawValue] of Object.entries(stats)) {
+        const type = RESIST_STAT_ID[statId];
+        if (!type || typeof rawValue !== "number") continue;
+        out.push({
+          type,
+          value: rawValue,
+          tier: modId ? tierFromModId(modId) : null,
+          modId,
+          category: category as ModCategory,
+        });
+      }
+    }
+  }
+  return out;
 }
 
 // poe.ninja items are `{ itemData, itemSlot }` (itemSlot a numeric enum);
@@ -200,8 +254,11 @@ function normalizeGear(raw: unknown): GearItem[] {
       mods: isWrapped
         ? modsFrom(data)
         : Array.isArray(data.mods)
-          ? data.mods.filter((m): m is string => typeof m === "string")
+          ? data.mods
+              .filter((m): m is string => typeof m === "string")
+              .map((text) => ({ category: "explicit" as ModCategory, text }))
           : [],
+      resistances: isWrapped ? resistancesFrom(data) : [],
     });
   }
   return out;
