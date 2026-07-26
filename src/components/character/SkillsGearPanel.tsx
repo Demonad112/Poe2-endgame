@@ -3,7 +3,11 @@ import type {
   ImportedCharacter,
   ModCategory,
 } from "@/lib/characterImport/types";
-import { RESIST_LABEL, type ResistanceType } from "@/lib/characterImport/resistanceTiers";
+import {
+  RESIST_LABEL,
+  displayTier,
+  type ResistanceType,
+} from "@/lib/characterImport/resistanceTiers";
 import { SectionTitle } from "@/components/shared/SectionTitle";
 
 const RARITY_COLOR: Record<string, string> = {
@@ -51,7 +55,11 @@ function tierForModLine(
   const grant = (item.resistances ?? []).find(
     (r) => r.type === match && r.tier !== null && r.category !== "implicit"
   );
-  return grant?.tier != null ? `T${grant.tier}` : null;
+  if (grant?.tier == null) return null;
+  // The game counts T1 as the strongest, the opposite way round to the
+  // internal mod-id numbering these tiers are parsed from.
+  const shown = displayTier(match, grant.tier);
+  return shown == null ? null : `T${shown}`;
 }
 
 function GearCard({ item }: { item: GearItem }) {

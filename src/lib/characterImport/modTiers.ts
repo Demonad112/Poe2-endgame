@@ -70,3 +70,15 @@ export function bestRowForIlvl(
 export function rowForTier(family: ModFamily, tier: number): ModTierRow | null {
   return family.t.find((row) => row.t === tier) ?? null;
 }
+
+/**
+ * The tier number the game shows for a row.
+ *
+ * Internal ids climb with item level (LocalIncreasedEnergyShield8 is stronger
+ * than ...7), but Path of Exile displays the strongest tier as T1 and counts
+ * downward, so the two orderings are reversed. Ranking by required item level
+ * rather than list position stays correct when a family's numbering has gaps.
+ */
+export function displayTierOf(family: ModFamily, row: ModTierRow): number {
+  return 1 + family.t.filter((other) => other.i > row.i).length;
+}

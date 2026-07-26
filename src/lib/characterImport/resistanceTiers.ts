@@ -111,6 +111,22 @@ export function tierFromModId(modId: string): number | null {
   return m ? Number(m[2]) : null;
 }
 
+/**
+ * Convert an internal mod-id number to the tier the game displays.
+ *
+ * These run opposite ways. The id suffix climbs with item level, so
+ * FireResist8 is the strongest roll — but Path of Exile shows the strongest
+ * tier as T1 and counts downward. Ranking by required level rather than by
+ * position keeps this correct even if a family's numbering has gaps.
+ */
+export function displayTier(type: ResistanceType, internalTier: number): number | null {
+  const tiers = RESIST_TIERS[RESIST_FAMILY[type]];
+  if (!tiers) return null;
+  const self = tiers.find((t) => t.tier === internalTier);
+  if (!self) return null;
+  return 1 + tiers.filter((t) => t.ilvl > self.ilvl).length;
+}
+
 /** The best tier of a resistance that an item of this level could roll. */
 export function bestTierForIlvl(
   type: ResistanceType,
