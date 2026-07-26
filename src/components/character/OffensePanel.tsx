@@ -1,6 +1,7 @@
 import type { PobStats } from "@/lib/characterImport/types";
 import { formatCompact } from "@/lib/characterImport/format";
 import { describePobConfig } from "@/lib/characterImport/pobConfig";
+import type { DpsBreakdown } from "@/lib/characterImport/dpsAdvice";
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
@@ -11,7 +12,13 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function OffensePanel({ pob }: { pob: PobStats }) {
+export function OffensePanel({
+  pob,
+  dps,
+}: {
+  pob: PobStats;
+  dps: DpsBreakdown | null;
+}) {
   return (
     <div className="space-y-4">
 
@@ -67,7 +74,34 @@ export function OffensePanel({ pob }: { pob: PobStats }) {
         {pob.accuracy > 0 && (
           <Metric label="Accuracy" value={pob.accuracy.toLocaleString()} />
         )}
+        {dps?.critMultiplierEffective != null && (
+          // What crit is actually worth, rather than two numbers the player
+          // has to combine themselves: 5% chance at 2.48x is only +7% damage.
+          <Metric
+            label="Crit is worth"
+            value={`+${Math.round((dps.critMultiplierEffective - 1) * 100)}%`}
+          />
+        )}
       </div>
+
+      {dps && dps.factors.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-slate-300">
+            What&apos;s limiting this
+          </h3>
+          <ul className="space-y-2">
+            {dps.factors.map((f) => (
+              <li
+                key={f.id}
+                className="rounded-md border border-[var(--hairline)] bg-[var(--surface-well)] p-3"
+              >
+                <p className="text-sm text-slate-200">{f.finding}</p>
+                <p className="mt-1 text-sm text-slate-400">{f.action}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

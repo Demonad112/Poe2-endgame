@@ -2,6 +2,7 @@ import type { ImportedCharacter } from "./types";
 import { assessBuild, type BuildAssessment } from "./buildScore";
 import { analyseResistances, type ResistanceAdvice } from "./resistanceAdvice";
 import { auditGear, type GearAudit, type TierUpgrade } from "./gearAudit";
+import { analyseDps, type DpsBreakdown } from "./dpsAdvice";
 import type { ModTierTable } from "./modTiers";
 import { RESIST_LABEL, RESIST_STAT_ID } from "./resistanceTiers";
 import {
@@ -70,6 +71,8 @@ export interface CharacterAnalysis {
   keystones: KeystoneEffects;
   /** Defensive pool with keystone conversions applied — not a naive sum. */
   pool: number;
+  /** Factor-level breakdown of the DPS figure, when there is one. */
+  dps: DpsBreakdown | null;
   /** Ranked, deduplicated, conflict-resolved. */
   actions: Action[];
   /** True when the tier table is still pending, so gear actions may be missing. */
@@ -97,6 +100,7 @@ const SCORE = {
   chaosBelowTarget: 42,
   modestDps: 34,
   deadMod: 22,
+  openAffix: 52,
 } as const;
 
 /** Base impact for a tier upgrade, by what the stat does for the build. */
@@ -200,6 +204,9 @@ export function analyseCharacter(
     if (status.shortfall > 0) shortfalls.set(status.type, status.shortfall);
     else cappedOrOver.add(status.type);
   }
+
+  // Needs the gear audit's crit-modifier detection, so it runs after it.
+  const dps_ = pob ? analyseDps(pob, gear?.hasCritMods ?? false) : null;
 
   const actions: Action[] = [];
 
@@ -347,6 +354,47 @@ export function analyseCharacter(
     });
   }
 
+  // --- Offence, factor by factor -------------------------------------------
+  // The generic "damage is modest" verdict says nothing a player can act on.
+  // These name the specific factor that is out of line and what to do, which
+  // is what every other action on the page already does.
+  for (const factor of dps_?.factors ?? []) {
+    actions.push({
+      id: factor.id,
+      title: factor.finding,
+      detail: factor.action,
+      why: "Derived from Path of Building's own attack and critical figures — arithmetic on this character, not a comparison to a benchmark.",
+      severity: factor.severity === "important" ? "important" : "opportunity",
+      score: factor.score,
+      evidence: "Offense",
+    });
+  }
+
+  // --- Unspent affix slots -------------------------------------------------
+  // Empty affixes are the cheapest real upgrade on the page: no competition
+  // with an existing modifier, and the item is already equipped.
+  for (const open of gear?.openAffixes ?? []) {
+    const parts = [
+      open.openPrefixes > 0
+        ? `${open.openPrefixes} prefix${open.openPrefixes === 1 ? "" : "es"}`
+        : null,
+      open.openSuffixes > 0
+        ? `${open.openSuffixes} suffix${open.openSuffixes === 1 ? "" : "es"}`
+        : null,
+    ].filter(Boolean);
+    actions.push({
+      id: `open-${open.itemSlot}-${open.itemName}`,
+      title: `${open.itemName} has ${parts.join(" and ")} unused`,
+      detail: `This ${open.rarity.toLowerCase()} ${open.itemSlot.toLowerCase()} is item level ${open.itemLevel} and is not carrying its full set of modifiers. Adding to an empty slot costs nothing in return, unlike replacing a modifier that is already doing work.`,
+      why: "An empty affix is the only upgrade on this page with no trade-off against something you already have.",
+      severity: "important",
+      score: SCORE.openAffix + (open.openPrefixes + open.openSuffixes) * 2,
+      itemName: open.itemName,
+      itemSlot: open.itemSlot,
+      evidence: "Gear audit",
+    });
+  }
+
   // --- Gear tier upgrades ---------------------------------------------------
   // A resistance that already has its own action above is fully owned by it:
   // that action states the shortfall and names the cheapest item that closes
@@ -417,6 +465,7 @@ export function analyseCharacter(
     passives,
     keystones,
     pool,
+    dps: dps_,
     actions,
     gearPending: table === null,
   };

@@ -272,6 +272,7 @@ function normalizeGear(raw: unknown): GearItem[] {
       base: str(data, "typeLine") ?? str(data, "baseType") ?? str(data, "type_line") ?? str(data, "base_type") ?? "",
       itemLevel: num(data, "ilvl") || num(data, "item_level"),
       rarity,
+      corrupted: data.corrupted === true,
       mods: isWrapped
         ? modsFrom(data)
         : Array.isArray(data.mods)

@@ -39,6 +39,23 @@ export interface QuestionableMod {
 
 export type Archetype = "attack" | "spell" | "unknown";
 
+/**
+ * An item with affix slots still empty.
+ *
+ * Reported conservatively: only when EVERY explicit-pool modifier on the item
+ * classified as a prefix or suffix. One unrecognised id means the used-slot
+ * count is a lower bound, and claiming an open slot that isn't there would
+ * send a player to spend currency on an item that can't take it.
+ */
+export interface OpenAffixes {
+  itemName: string;
+  itemSlot: string;
+  itemLevel: number;
+  rarity: string;
+  openPrefixes: number;
+  openSuffixes: number;
+}
+
 export interface GearAudit {
   archetype: Archetype;
   archetypeBasis: string;
@@ -47,6 +64,49 @@ export interface GearAudit {
   questionable: QuestionableMod[];
   /** Mods that carried a tier we could grade. */
   gradedCount: number;
+  /**
+   * Affix-pool mods we could NOT grade, because the extracted tier table has
+   * no row for the tier the mod claims. The table has gaps inside families
+   * (39 of 567 are non-contiguous), so this is a real coverage limit, not a
+   * parsing failure — and it means "already at the best tier" is only true
+   * for the rows we know about.
+   */
+  ungradedCount: number;
+  /** Items with affix slots still empty — unspent crafting headroom. */
+  openAffixes: OpenAffixes[];
+  /** True when any gear carries crit-scaling modifiers. */
+  hasCritMods: boolean;
+}
+
+// Affix capacity by rarity. Normal items hold none; uniques have fixed
+// modifiers that aren't drawn from the affix pool at all.
+const AFFIX_CAPACITY: Record<string, number> = { Magic: 1, Rare: 3 };
+
+// Categories drawn from the affix pool. Implicits come from the base, runes
+// are socketed, enchants sit outside the pool — none of them occupy an
+// affix slot, so counting them would under-report open slots.
+const AFFIX_CATEGORIES = new Set(["explicit", "crafted", "desecrated"]);
+
+/**
+ * Count used prefix/suffix slots, or null when any modifier could not be
+ * classified — see OpenAffixes for why a lower bound is not good enough.
+ */
+function countAffixes(
+  item: GearItem,
+  table: ModTierTable
+): { prefixes: number; suffixes: number } | null {
+  let prefixes = 0;
+  let suffixes = 0;
+  for (const mod of item.structuredMods ?? []) {
+    if (!AFFIX_CATEGORIES.has(mod.category)) continue;
+    const split = splitModId(mod.id);
+    const family = split ? table[split.family] : null;
+    if (!family) return null;
+    if (family.g === "prefix") prefixes += 1;
+    else if (family.g === "suffix") suffixes += 1;
+    else return null;
+  }
+  return { prefixes, suffixes };
 }
 
 // Only stats worth surfacing an upgrade for — raw defensive and offensive
@@ -213,7 +273,10 @@ export function auditGear(
   const weaponType = detectWeapon(character.gear);
   const upgrades: TierUpgrade[] = [];
   const questionable: QuestionableMod[] = [];
+  const openAffixes: OpenAffixes[] = [];
   let gradedCount = 0;
+  let ungradedCount = 0;
+  let hasCritMods = false;
 
   for (const item of character.gear) {
     // Weapon-swap slots are a secondary setup, not what you're playing, and
@@ -233,8 +296,29 @@ export function auditGear(
       });
     }
 
+    // --- Unspent affix slots ---
+    const capacity = AFFIX_CAPACITY[item.rarity];
+    if (capacity && !item.corrupted && item.itemLevel > 0) {
+      const used = countAffixes(item, table);
+      if (used) {
+        const openPrefixes = Math.max(0, capacity - used.prefixes);
+        const openSuffixes = Math.max(0, capacity - used.suffixes);
+        if (openPrefixes + openSuffixes > 0) {
+          openAffixes.push({
+            itemName: item.name,
+            itemSlot: item.slot,
+            itemLevel: item.itemLevel,
+            rarity: item.rarity,
+            openPrefixes,
+            openSuffixes,
+          });
+        }
+      }
+    }
+
     for (const mod of item.structuredMods ?? []) {
       const statIds = Object.keys(mod.stats);
+      if (statIds.some((id) => /critical/.test(id))) hasCritMods = true;
 
       // --- Mods that may be doing nothing for this build ---
       for (const statId of statIds) {
@@ -320,7 +404,13 @@ export function auditGear(
       if (!family) continue;
       const currentRow = rowForTier(family, split.tier);
       const bestRow = bestRowForIlvl(family, item.itemLevel);
-      if (!currentRow || !bestRow) continue;
+      if (!currentRow || !bestRow) {
+        // The family resolved but the tier is absent from the table, so any
+        // comparison would be against an incomplete ladder. Count it rather
+        // than pretending the mod doesn't exist.
+        ungradedCount += 1;
+        continue;
+      }
       gradedCount += 1;
       if (bestRow.t <= split.tier) continue;
       const currentDisplay = displayTierOf(family, currentRow);
@@ -365,5 +455,8 @@ export function auditGear(
     upgrades,
     questionable,
     gradedCount,
+    ungradedCount,
+    openAffixes,
+    hasCritMods,
   };
 }

@@ -64,6 +64,8 @@ export interface GearItem {
   base: string;
   itemLevel: number;
   rarity: string;
+  /** Corrupted items cannot be modified, so no affix advice applies. */
+  corrupted: boolean;
   /** Human-readable modifier lines, grouped by where they came from. */
   mods: { category: ModCategory; text: string }[];
   /** Structured resistance contributions, used by the advice engine. */
@@ -135,8 +137,10 @@ export interface PobStats {
  * 4: PobStats gained `config` and `allocatedNodes`. A v3 character has a
  *    `pob` without them, and the config drives text the UI now always
  *    renders alongside DPS, so a stale one must not be revived.
+ * 5: GearItem gained `corrupted`. Absent, it reads as undefined and a
+ *    corrupted item would be offered craft advice it cannot accept.
  */
-export const CHARACTER_SCHEMA_VERSION = 4;
+export const CHARACTER_SCHEMA_VERSION = 5;
 
 export interface ImportedCharacter {
   schemaVersion: number;
