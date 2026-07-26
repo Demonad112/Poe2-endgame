@@ -7,6 +7,7 @@ import { CharacterSummaryCard } from "./CharacterSummaryCard";
 import { DefenseStatsPanel } from "./DefenseStatsPanel";
 import { OffensePanel } from "./OffensePanel";
 import { MaxHitPanel } from "./MaxHitPanel";
+import { ResistanceAdvicePanel } from "./ResistanceAdvicePanel";
 import { BuildScoreCard } from "./BuildScoreCard";
 import { PassiveTreeSummary } from "./PassiveTreeSummary";
 import { SkillsGearPanel } from "./SkillsGearPanel";
@@ -54,6 +55,10 @@ export function CharacterWorkspace() {
               <MaxHitPanel pob={pinnedImport.pob} />
             </section>
           )}
+
+          <section>
+            <ResistanceAdvicePanel character={pinnedImport} />
+          </section>
 
           <section>
             <PassiveTreeSummary character={pinnedImport} />

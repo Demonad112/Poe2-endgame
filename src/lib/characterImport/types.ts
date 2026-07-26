@@ -33,13 +33,34 @@ export interface SkillSetup {
   supports: string[];
 }
 
+export type ModCategory =
+  | "implicit"
+  | "explicit"
+  | "crafted"
+  | "desecrated"
+  | "rune"
+  | "enchant";
+
+/** A single resistance granted by one modifier on an item. */
+export interface ResistanceGrant {
+  type: "fire" | "cold" | "lightning" | "chaos";
+  value: number;
+  /** Tier parsed from the mod id (e.g. FireResist7 -> 7), when derivable. */
+  tier: number | null;
+  modId: string;
+  category: ModCategory;
+}
+
 export interface GearItem {
   slot: string;
   name: string;
   base: string;
   itemLevel: number;
   rarity: string;
-  mods: string[];
+  /** Human-readable modifier lines, grouped by where they came from. */
+  mods: { category: ModCategory; text: string }[];
+  /** Structured resistance contributions, used by the advice engine. */
+  resistances: ResistanceGrant[];
 }
 
 export interface DamageTypeBreakdown {
