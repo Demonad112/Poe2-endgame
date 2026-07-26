@@ -39,8 +39,30 @@ export function GearAuditPanel({
     <div className="space-y-4">
       <p className="text-sm text-slate-400">
         Every rollable modifier on your gear, graded against the best tier its
-        item level could roll. {audit.gradedCount} modifiers checked.
+        item level could roll. {audit.gradedCount} modifiers checked
+        {audit.ungradedCount > 0 && (
+          <>
+            , {audit.ungradedCount} skipped
+          </>
+        )}
+        .
       </p>
+
+      {audit.ungradedCount > 0 && (
+        // Coverage honesty: the extracted tier table has gaps inside families,
+        // so a mod can resolve to a family whose ladder is missing the row it
+        // sits on. Saying nothing would let "already at the best tier" read as
+        // a complete answer when it isn't.
+        <p className="rounded-md border border-[var(--caution)]/25 bg-[var(--caution)]/[0.05] p-3 text-xs text-amber-50/80">
+          {audit.ungradedCount} modifier{audit.ungradedCount === 1 ? "" : "s"}{" "}
+          on your gear could not be graded: the affix table this uses is missing
+          the tier row{audit.ungradedCount === 1 ? "" : "s"}{" "}
+          they sit on, so they are excluded rather than compared against an
+          incomplete ladder.
+          Where that happens, &ldquo;already at the best tier&rdquo; only means
+          the best tier <em>we know about</em>.
+        </p>
+      )}
 
       <p className="rounded-md border border-[var(--hairline-soft)] bg-[var(--surface-well)] p-3 text-xs text-slate-400">
         T1 is the <em>theoretical</em> best an item level allows, not a
@@ -49,6 +71,49 @@ export function GearAuditPanel({
         and take the ordering from &ldquo;Fix next&rdquo; above rather than
         from the size of the gap.
       </p>
+
+      {audit.openAffixes.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-slate-300">
+            Unused affix slots
+          </h3>
+          <ul className="space-y-2">
+            {audit.openAffixes.map((o, i) => (
+              <li
+                key={i}
+                className="rounded-lg border border-[var(--good)]/25 bg-[var(--good)]/[0.05] p-3 text-sm"
+              >
+                <p className="flex flex-wrap items-baseline justify-between gap-x-2">
+                  <span className="font-medium text-slate-100">{o.itemName}</span>
+                  <span className="text-[11px] text-slate-500">
+                    {o.itemSlot} · ilvl {o.itemLevel}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-slate-400">
+                  {o.openPrefixes > 0 && (
+                    <>
+                      {o.openPrefixes} open prefix
+                      {o.openPrefixes === 1 ? "" : "es"}
+                    </>
+                  )}
+                  {o.openPrefixes > 0 && o.openSuffixes > 0 && " · "}
+                  {o.openSuffixes > 0 && (
+                    <>
+                      {o.openSuffixes} open suffix
+                      {o.openSuffixes === 1 ? "" : "es"}
+                    </>
+                  )}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-slate-500">
+            Only listed when every modifier on the item was identified as a
+            prefix or suffix — an unrecognised one would make this a guess.
+            Corrupted items are excluded since they can&apos;t be changed.
+          </p>
+        </div>
+      )}
 
       {topUpgrades.length === 0 ? (
         <p className="rounded-lg border border-[var(--good)]/30 bg-[var(--good)]/[0.06] p-3 text-sm text-emerald-100/90">

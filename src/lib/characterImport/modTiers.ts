@@ -49,11 +49,20 @@ export async function loadModTiers(): Promise<ModTierTable | null> {
   return inflight;
 }
 
-/** Split "LocalIncreasedEnergyShield8" into its family and tier number. */
+/**
+ * Split "LocalIncreasedEnergyShield8" into its family and tier number.
+ *
+ * Trailing underscores are tolerated: poe.ninja ships ids like
+ * "LocalIncreasedEvasionAndEnergyShield5_" and
+ * "LocalBaseEvasionRatingAndEnergyShield7___", where the tier digits are not
+ * the last characters. Anchoring on `\d+$` silently dropped those mods from
+ * every tier calculation — on the test character that hid two Evasion+Energy
+ * Shield prefixes, the most build-relevant mods it had.
+ */
 export function splitModId(
   modId: string
 ): { family: string; tier: number } | null {
-  const m = /^(.*?)(\d+)$/.exec(modId);
+  const m = /^(.*?)(\d+)_*$/.exec(modId);
   if (!m || !m[1]) return null;
   return { family: m[1], tier: Number(m[2]) };
 }

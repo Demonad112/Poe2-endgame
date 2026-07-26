@@ -185,7 +185,7 @@ function CharacterAnalysis({
                 tone="accent"
               />
             ),
-            content: <OffensePanel pob={pob} />,
+            content: <OffensePanel pob={pob} dps={analysis.dps} />,
           },
         ]
       : []),
