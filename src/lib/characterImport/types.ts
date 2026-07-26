@@ -96,7 +96,17 @@ export interface PobStats {
   blockChance: number;
 }
 
+/**
+ * Bumped whenever ImportedCharacter's shape changes in a way older stored
+ * data can't satisfy. A pinned character whose version doesn't match is
+ * discarded on load rather than rendered — an out-of-date snapshot is one
+ * re-import away, whereas feeding it to code expecting new fields crashed
+ * the whole page.
+ */
+export const CHARACTER_SCHEMA_VERSION = 2;
+
 export interface ImportedCharacter {
+  schemaVersion: number;
   name: string;
   account: string;
   level: number;
