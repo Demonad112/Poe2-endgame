@@ -51,6 +51,13 @@ export interface ResistanceGrant {
   category: ModCategory;
 }
 
+/** A modifier with its game id and stat values, as poe.ninja supplies it. */
+export interface StructuredMod {
+  id: string;
+  category: ModCategory;
+  stats: Record<string, number>;
+}
+
 export interface GearItem {
   slot: string;
   name: string;
@@ -61,6 +68,8 @@ export interface GearItem {
   mods: { category: ModCategory; text: string }[];
   /** Structured resistance contributions, used by the advice engine. */
   resistances: ResistanceGrant[];
+  /** Every structured modifier, used by the gear audit. */
+  structuredMods: StructuredMod[];
 }
 
 export interface DamageTypeBreakdown {
@@ -103,7 +112,7 @@ export interface PobStats {
  * re-import away, whereas feeding it to code expecting new fields crashed
  * the whole page.
  */
-export const CHARACTER_SCHEMA_VERSION = 2;
+export const CHARACTER_SCHEMA_VERSION = 3;
 
 export interface ImportedCharacter {
   schemaVersion: number;

@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
   output: "export",
   images: { unoptimized: true },
   trailingSlash: true,
+  // Re-export the base path under a NEXT_PUBLIC_ name so client components
+  // can read it too. Next only inlines process.env into *server* code unless
+  // the variable is NEXT_PUBLIC_-prefixed, so a client-side
+  // process.env.GITHUB_ACTIONS check silently evaluates to undefined and any
+  // asset URL built from it 404s in production while working locally.
+  env: {
+    NEXT_PUBLIC_BASE_PATH: isGithubActionsBuild ? `/${repoName}` : "",
+  },
   ...(isGithubActionsBuild
     ? {
         basePath: `/${repoName}`,

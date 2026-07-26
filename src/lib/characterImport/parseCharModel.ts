@@ -6,6 +6,7 @@ import type {
   ModCategory,
   ResistanceGrant,
   SkillSetup,
+  StructuredMod,
 } from "./types";
 import { CHARACTER_SCHEMA_VERSION } from "./types";
 import { estimateEhp } from "./ehpEstimate";
@@ -196,6 +197,25 @@ function modsFrom(
   return out;
 }
 
+function structuredModsFrom(itemData: Record<string, unknown>): StructuredMod[] {
+  const modsObj = asRecord(itemData.mods);
+  const out: StructuredMod[] = [];
+  for (const [category, arr] of Object.entries(modsObj)) {
+    if (!Array.isArray(arr)) continue;
+    for (const entry of arr) {
+      const mod = asRecord(entry);
+      const id = str(mod, "id");
+      if (!id) continue;
+      const stats: Record<string, number> = {};
+      for (const [statId, value] of Object.entries(asRecord(mod.stats))) {
+        if (typeof value === "number") stats[statId] = value;
+      }
+      out.push({ id, category: category as ModCategory, stats });
+    }
+  }
+  return out;
+}
+
 // The `mods` object carries the structured form the display strings lack:
 // a mod id (whose numeric suffix is its tier) and the stat values it grants.
 // That's what makes real tier analysis possible.
@@ -260,6 +280,7 @@ function normalizeGear(raw: unknown): GearItem[] {
               .map((text) => ({ category: "explicit" as ModCategory, text }))
           : [],
       resistances: isWrapped ? resistancesFrom(data) : [],
+      structuredMods: isWrapped ? structuredModsFrom(data) : [],
     });
   }
   return out;
