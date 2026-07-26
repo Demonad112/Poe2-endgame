@@ -42,10 +42,16 @@ export interface ResistanceAdvice {
   noItemData: boolean;
 }
 
+// Persisted characters can predate fields added later, so every access to a
+// stored array is guarded rather than assumed.
+function grantsOf(item: GearItem): ResistanceGrant[] {
+  return Array.isArray(item.resistances) ? item.resistances : [];
+}
+
 function gearTotal(gear: GearItem[], type: ResistanceType): number {
   return gear.reduce(
     (sum, item) =>
-      sum + item.resistances.filter((r) => r.type === type).reduce((s, r) => s + r.value, 0),
+      sum + grantsOf(item).filter((r) => r.type === type).reduce((s, r) => s + r.value, 0),
     0
   );
 }
@@ -58,7 +64,7 @@ interface Contribution {
 function contributions(gear: GearItem[], type: ResistanceType): Contribution[] {
   const out: Contribution[] = [];
   for (const item of gear) {
-    for (const grant of item.resistances) {
+    for (const grant of grantsOf(item)) {
       if (grant.type === type) out.push({ item, grant });
     }
   }
@@ -98,7 +104,7 @@ export function analyseResistances(
     };
   });
 
-  const hasItemData = gear.some((g) => g.resistances.length > 0);
+  const hasItemData = gear.some((g) => grantsOf(g).length > 0);
   const suggestions: Suggestion[] = [];
 
   if (hasItemData) {

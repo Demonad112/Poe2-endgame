@@ -1,4 +1,5 @@
 import type { PersistedState } from "./types";
+import { CHARACTER_SCHEMA_VERSION } from "./characterImport/types";
 
 export const STORAGE_KEY = "poe2-endgame-companion:v1";
 export const STORAGE_VERSION = 1;
@@ -23,13 +24,51 @@ let cache: PersistedState = DEFAULT_STATE;
 let cacheInitialized = false;
 const listeners = new Set<() => void>();
 
+/**
+ * A pinned character is a snapshot of something that keeps changing as you
+ * play, so it goes stale on its own. Drop it after this long rather than
+ * presenting week-old gear as current.
+ */
+export const PINNED_IMPORT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+// A pinned character written by an older build can also be missing fields the
+// current UI reads, which previously threw during render and took the whole
+// page down with it. Both checks discard only the character — checklist,
+// Atlas and dashboard progress are untouched, so recovering never costs more
+// than one re-import.
+function sanitizeCharacter(
+  character: PersistedState["character"] | undefined
+): PersistedState["character"] {
+  const pinned = character?.pinnedImport;
+  if (!pinned) return { pinnedImport: undefined };
+
+  const shapeOk =
+    pinned.schemaVersion === CHARACTER_SCHEMA_VERSION &&
+    Array.isArray(pinned.gear) &&
+    Array.isArray(pinned.skills) &&
+    pinned.gear.every(
+      (item) => Array.isArray(item?.mods) && Array.isArray(item?.resistances)
+    );
+  if (!shapeOk) return { pinnedImport: undefined };
+
+  const fetchedAt = Date.parse(pinned.provenance?.fetchedAt ?? "");
+  const expired =
+    Number.isFinite(fetchedAt) && Date.now() - fetchedAt > PINNED_IMPORT_MAX_AGE_MS;
+
+  return { pinnedImport: expired ? undefined : pinned };
+}
+
 function readFromLocalStorage(): PersistedState {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STATE;
     const parsed = JSON.parse(raw) as PersistedState;
     if (!parsed || parsed.version !== STORAGE_VERSION) return DEFAULT_STATE;
-    return { ...DEFAULT_STATE, ...parsed };
+    return {
+      ...DEFAULT_STATE,
+      ...parsed,
+      character: sanitizeCharacter(parsed.character),
+    };
   } catch {
     return DEFAULT_STATE;
   }

@@ -48,7 +48,7 @@ function tierForModLine(
     new RegExp(`${RESIST_LABEL[type]} Resistance`, "i").test(mod.text)
   );
   if (!match) return null;
-  const grant = item.resistances.find(
+  const grant = (item.resistances ?? []).find(
     (r) => r.type === match && r.tier !== null && r.category !== "implicit"
   );
   return grant?.tier != null ? `T${grant.tier}` : null;
@@ -69,9 +69,9 @@ function GearCard({ item }: { item: GearItem }) {
           <span className="text-slate-600"> · ilvl {item.itemLevel}</span>
         )}
       </p>
-      {item.mods.length > 0 && (
+      {(item.mods ?? []).length > 0 && (
         <ul className="mt-2 space-y-0.5 border-t border-white/[0.06] pt-2">
-          {item.mods.map((mod, i) => {
+          {(item.mods ?? []).map((mod, i) => {
             const tier = tierForModLine(item, mod);
             return (
               <li

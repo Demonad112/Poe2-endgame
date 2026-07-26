@@ -7,6 +7,7 @@ import type {
   ResistanceGrant,
   SkillSetup,
 } from "./types";
+import { CHARACTER_SCHEMA_VERSION } from "./types";
 import { estimateEhp } from "./ehpEstimate";
 import { RESIST_STAT_ID, tierFromModId } from "./resistanceTiers";
 
@@ -314,6 +315,7 @@ export function normalizeCharacter(
   const ehp = ehpIsEstimate ? estimateEhp(stats) : stats.effectiveHealthPool;
 
   return {
+    schemaVersion: CHARACTER_SCHEMA_VERSION,
     name: model.name ?? fallbackCharacter ?? "Unknown",
     account: model.account ?? fallbackAccount ?? "Unknown",
     level: model.level ?? 0,
