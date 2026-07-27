@@ -2,6 +2,7 @@ import type { PobStats } from "@/lib/characterImport/types";
 import { formatCompact } from "@/lib/characterImport/format";
 import { describePobConfig } from "@/lib/characterImport/pobConfig";
 import type { DpsBreakdown } from "@/lib/characterImport/dpsAdvice";
+import type { LadderSummary } from "@/lib/characterImport/ladderClient";
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
@@ -15,10 +16,18 @@ function Metric({ label, value }: { label: string; value: string }) {
 export function OffensePanel({
   pob,
   dps,
+  ladder,
 }: {
   pob: PobStats;
   dps: DpsBreakdown | null;
+  ladder?: LadderSummary | null;
 }) {
+  // Where this character's damage sits inside the sampled range, as a bar.
+  // Scaled to p75 rather than max, because a single 16M outlier would squash
+  // every real build into the first pixel.
+  const ls = ladder?.dps ?? null;
+  const scale = ls ? Math.max(ls.p75, pob.combinedDps) : 0;
+  const pct = (v: number) => (scale > 0 ? Math.min(100, (v / scale) * 100) : 0);
   return (
     <div className="space-y-4">
 
@@ -83,6 +92,55 @@ export function OffensePanel({
           />
         )}
       </div>
+
+      {ls && ladder && (
+        // Replaces a verdict graded against three invented constants. States
+        // the sample explicitly and never calls it a percentile — the ladder
+        // endpoint returns one page of top builds, which cannot support that.
+        <div className="rounded-md border border-[var(--hairline)] bg-[var(--surface-well)] p-3">
+          <p className="text-xs text-slate-400">
+            Against the top {ladder.sampleSize}{" "}
+            {ladder.class ? `${ladder.class}s` : "builds"}
+            {ladder.levelRange
+              ? ` (level ${ladder.levelRange.min}${ladder.levelRange.max !== ladder.levelRange.min ? `–${ladder.levelRange.max}` : ""})`
+              : ""}{" "}
+            on the ladder this snapshot:
+          </p>
+          <div className="relative mt-3 h-2 rounded-full border border-[var(--hairline-soft)] bg-black/40">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent)]/70"
+              style={{ width: `${pct(pob.combinedDps)}%` }}
+            />
+            {(["p25", "median", "p75"] as const).map((k) => (
+              <span
+                key={k}
+                className="absolute -top-1 -bottom-1 w-px bg-slate-500"
+                style={{ left: `${pct(ls[k])}%` }}
+              />
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+            <span>
+              25th <span className="text-slate-300 tabular-nums">{formatCompact(ls.p25)}</span>
+            </span>
+            <span>
+              median <span className="text-slate-300 tabular-nums">{formatCompact(ls.median)}</span>
+            </span>
+            <span>
+              75th <span className="text-slate-300 tabular-nums">{formatCompact(ls.p75)}</span>
+            </span>
+            <span className="text-[var(--accent)]">
+              you <span className="tabular-nums">{formatCompact(pob.combinedDps)}</span>
+            </span>
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+            This is the top of the ladder, not the average player — poe.ninja
+            returns a single page of the highest-ranked builds and ignores
+            pagination, so it shows the gap to the best rather than a
+            percentile. Those builds are also near max level.
+          </p>
+        </div>
+      )}
 
       {dps && dps.factors.length > 0 && (
         <div className="space-y-2">

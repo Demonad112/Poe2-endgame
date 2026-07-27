@@ -6,6 +6,7 @@ import { Accordion } from "@/components/shared/Accordion";
 import { useCharacterImport } from "@/hooks/useCharacterImport";
 import { useModTiers } from "@/hooks/useModTiers";
 import { usePassiveNodes } from "@/hooks/usePassiveNodes";
+import { useLadder } from "@/hooks/useLadder";
 import { analyseCharacter } from "@/lib/characterImport/analysis";
 import { RESIST_LABEL } from "@/lib/characterImport/resistanceTiers";
 import { ONE_SHOT_RATIO } from "@/lib/characterImport/thresholds";
@@ -73,6 +74,7 @@ export function CharacterWorkspace() {
   const { table: passiveTable, pending: passivesPending } = usePassiveNodes(
     Boolean(pinnedImport)
   );
+  const { ladder } = useLadder(pinnedImport?.league, pinnedImport?.ascendancy);
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,6 +90,7 @@ export function CharacterWorkspace() {
           table={table}
           passiveTable={passiveTable}
           passivesPending={passivesPending}
+          ladder={ladder}
           history={history}
           onSnapshot={recordSnapshot}
           tablePending={pending}
@@ -104,6 +107,7 @@ function CharacterAnalysis({
   table,
   passiveTable,
   passivesPending,
+  ladder,
   history,
   onSnapshot,
   tablePending,
@@ -114,13 +118,14 @@ function CharacterAnalysis({
   table: Parameters<typeof analyseCharacter>[1];
   passiveTable: Parameters<typeof analyseCharacter>[2];
   passivesPending: boolean;
+  ladder: Parameters<typeof analyseCharacter>[3];
   history: CharacterSnapshot[];
   onSnapshot: (s: CharacterSnapshot) => void;
   tablePending: boolean;
   tableFailed: boolean;
   onClear: () => void;
 }) {
-  const analysis = analyseCharacter(character, table, passiveTable);
+  const analysis = analyseCharacter(character, table, passiveTable, ladder);
   const { pob } = character;
   const key = snapshotKey(character);
 
@@ -251,7 +256,13 @@ function CharacterAnalysis({
                 tone="accent"
               />
             ),
-            content: <OffensePanel pob={pob} dps={analysis.dps} />,
+            content: (
+              <OffensePanel
+                pob={pob}
+                dps={analysis.dps}
+                ladder={analysis.ladder}
+              />
+            ),
           },
         ]
       : []),

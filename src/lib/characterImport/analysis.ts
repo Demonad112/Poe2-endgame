@@ -18,12 +18,11 @@ import {
 } from "./keystoneEffects";
 import {
   CHAOS_CRITICAL,
-  DPS_LOW,
-  DPS_OK,
   ONE_SHOT_RATIO,
   POOL_THIN,
   type ResistanceKey,
 } from "./thresholds";
+import { bandFor, BAND_LABEL, type LadderSummary } from "./ladderClient";
 
 /**
  * One ranked pass over everything we know about a character.
@@ -73,6 +72,8 @@ export interface CharacterAnalysis {
   pool: number;
   /** Factor-level breakdown of the DPS figure, when there is one. */
   dps: DpsBreakdown | null;
+  /** Top-of-ladder reference figures, when the proxy supplied them. */
+  ladder: LadderSummary | null;
   /** Ranked, deduplicated, conflict-resolved. */
   actions: Action[];
   /** True when the tier table is still pending, so gear actions may be missing. */
@@ -96,9 +97,8 @@ const SCORE = {
   oneShotRisk: 84,
   negativeChaos: 80,
   thinPool: 70,
-  lowDps: 64,
   chaosBelowTarget: 42,
-  modestDps: 34,
+  belowLadder: 38,
   deadMod: 22,
   openAffix: 52,
 } as const;
@@ -183,7 +183,8 @@ function severityFor(score: number): ActionSeverity {
 export function analyseCharacter(
   character: ImportedCharacter,
   table: ModTierTable | null,
-  passiveTable: PassiveNodeTable | null = null
+  passiveTable: PassiveNodeTable | null = null,
+  ladder: LadderSummary | null = null
 ): CharacterAnalysis {
   const { stats, pob } = character;
 
@@ -194,7 +195,17 @@ export function analyseCharacter(
     ? keystoneEffectsOf(passives.keystones, stats)
     : NO_KEYSTONE_EFFECTS;
 
-  const assessment = assessBuild(character, keystones);
+  // How the ladder sample should be described wherever it drives a claim.
+  // Always names the sample size and level range, because "top 100 level-100
+  // Deadeyes" and "Deadeyes" are very different comparisons.
+  const ladderBasis = ladder
+    ? `the top ${ladder.sampleSize} ${ladder.class ? `${ladder.class}s` : "builds"}${
+        ladder.levelRange
+          ? ` (level ${ladder.levelRange.min}${ladder.levelRange.max !== ladder.levelRange.min ? `-${ladder.levelRange.max}` : ""})`
+          : ""
+      }`
+    : undefined;
+  const assessment = assessBuild(character, keystones, ladder?.dps, ladderBasis);
   const resistances = analyseResistances(character);
   const gear = table ? auditGear(character, table, keystones) : null;
 
@@ -334,28 +345,29 @@ export function analyseCharacter(
     });
   }
 
-  // --- Offense --------------------------------------------------------------
-  const dps = pob?.combinedDps ?? 0;
-  if (pob && dps > 0 && dps < DPS_OK) {
-    const low = dps < DPS_LOW;
-    const versusBoss = pob.config?.versusBoss ?? false;
-    actions.push({
-      id: "dps",
-      title: low
-        ? `Damage is low for endgame — ${Math.round(dps).toLocaleString()} DPS`
-        : `Damage is modest — ${Math.round(dps).toLocaleString()} DPS`,
-      detail: versusBoss
-        ? "This figure was calculated against a boss, so it reflects single-target damage directly."
-        : "This figure was not calculated against a boss, so real single-target damage on pinnacle fights will differ — re-check in Path of Building with a boss configured before acting on it.",
-      why: "Compared against rough endgame bands chosen for this tool, not a published community benchmark.",
-      severity: low ? "important" : "opportunity",
-      score: low ? SCORE.lowDps : SCORE.modestDps,
-      evidence: "Offense",
-    });
+  // --- Damage against observed figures ---------------------------------------
+  // Replaces a verdict that used to be graded against three invented numbers.
+  // This states where the character sits in a sample we actually measured, and
+  // names the sample — never a population percentile, which this data cannot
+  // support.
+  const dpsValue = pob?.combinedDps ?? 0;
+  if (pob && dpsValue > 0 && ladder?.dps && ladderBasis) {
+    const band = bandFor(dpsValue, ladder.dps);
+    if (band === "below" || band === "p25") {
+      actions.push({
+        id: "dps-vs-ladder",
+        title: `Damage is ${BAND_LABEL[band]} for your class`,
+        detail: `${Math.round(dpsValue).toLocaleString()} combined DPS against ${ladderBasis}, which run ${ladder.dps.p25.toLocaleString()} at the 25th percentile and ${ladder.dps.median.toLocaleString()} at the median.`,
+        why: "A top-of-ladder sample, so this is the ceiling rather than the average player. Treat it as the gap to the best, not as a percentile.",
+        severity: band === "below" ? "important" : "opportunity",
+        score: band === "below" ? SCORE.belowLadder : SCORE.belowLadder - 10,
+        evidence: "Offense",
+      });
+    }
   }
 
   // --- Offence, factor by factor -------------------------------------------
-  // The generic "damage is modest" verdict says nothing a player can act on.
+  // The generic "damage is modest" verdict said nothing a player could act on.
   // These name the specific factor that is out of line and what to do, which
   // is what every other action on the page already does.
   for (const factor of dps_?.factors ?? []) {
@@ -466,6 +478,7 @@ export function analyseCharacter(
     keystones,
     pool,
     dps: dps_,
+    ladder,
     actions,
     gearPending: table === null,
   };

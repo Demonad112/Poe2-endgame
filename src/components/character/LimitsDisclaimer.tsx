@@ -75,10 +75,17 @@ export function LimitsDisclaimer({
           more trustworthy about that ordering than about any single entry.
         </li>
         <li>
-          The letter grade is a rough guide from thresholds we picked, not a
-          published community benchmark. The {CHAOS_TARGET}% chaos resistance
-          target is likewise a judgement call — chaos has no cap in PoE2 the
-          way the elements do.
+          Damage is graded against figures read from poe.ninja&apos;s ladder for
+          your ascendancy, replacing three thresholds that were previously
+          invented. That sample is a single page of the highest-ranked builds
+          at or near max level — it shows the gap to the best, not a percentile
+          of players, and when it can&apos;t be fetched the offence half of the
+          grade is left unscored rather than guessed.
+        </li>
+        <li>
+          Defensive thresholds are still judgement calls: the {CHAOS_TARGET}%
+          chaos resistance target especially, since chaos has no cap in PoE2
+          the way the elements do.
         </li>
         <li>
           Gear tier gaps are measured against the best tier an item level
@@ -86,8 +93,8 @@ export function LimitsDisclaimer({
           crafting target.
         </li>
         <li>
-          Passive tree is a point count only — node-by-node visualization is a
-          planned follow-up. No ladder comparison yet.
+          Passive tree lists keystones, ascendancy and notables; a node-by-node
+          visualization is still a planned follow-up.
           {nodesDisagree && (
             <>
               {" "}
