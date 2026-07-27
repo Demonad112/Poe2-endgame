@@ -9,7 +9,7 @@ const DEFAULT_STATE: PersistedState = {
   checklist: { completedStepIds: [], completedActionItemKeys: [] },
   atlas: { allocatedClusterIds: [], allocatedForkIds: [] },
   dashboard: { lastQuizAnswers: {}, pinnedStrategyId: undefined },
-  character: { pinnedImport: undefined },
+  character: { pinnedImport: undefined, history: [] },
   updatedAt: new Date(0).toISOString(),
 };
 
@@ -39,8 +39,18 @@ export const PINNED_IMPORT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 function sanitizeCharacter(
   character: PersistedState["character"] | undefined
 ): PersistedState["character"] {
+  // History survives independently of the pinned character. A snapshot holds
+  // only numbers, so a schema bump to ImportedCharacter — which discards the
+  // pinned import — must not throw away a trend that is still readable.
+  const history = Array.isArray(character?.history)
+    ? character.history.filter(
+        (s): s is NonNullable<typeof s> =>
+          !!s && typeof s.key === "string" && typeof s.at === "string"
+      )
+    : [];
+
   const pinned = character?.pinnedImport;
-  if (!pinned) return { pinnedImport: undefined };
+  if (!pinned) return { pinnedImport: undefined, history };
 
   const shapeOk =
     pinned.schemaVersion === CHARACTER_SCHEMA_VERSION &&
@@ -49,13 +59,13 @@ function sanitizeCharacter(
     pinned.gear.every(
       (item) => Array.isArray(item?.mods) && Array.isArray(item?.resistances)
     );
-  if (!shapeOk) return { pinnedImport: undefined };
+  if (!shapeOk) return { pinnedImport: undefined, history };
 
   const fetchedAt = Date.parse(pinned.provenance?.fetchedAt ?? "");
   const expired =
     Number.isFinite(fetchedAt) && Date.now() - fetchedAt > PINNED_IMPORT_MAX_AGE_MS;
 
-  return { pinnedImport: expired ? undefined : pinned };
+  return { pinnedImport: expired ? undefined : pinned, history };
 }
 
 function readFromLocalStorage(): PersistedState {
