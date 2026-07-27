@@ -191,7 +191,7 @@ export function analyseCharacter(
   // this function would otherwise draw, so nothing below runs without them.
   const passives = resolvePassives(pob?.allocatedNodes, passiveTable);
   const keystones = passives
-    ? keystoneEffectsOf(passives.keystones)
+    ? keystoneEffectsOf(passives.keystones, stats)
     : NO_KEYSTONE_EFFECTS;
 
   const assessment = assessBuild(character, keystones);

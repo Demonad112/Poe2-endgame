@@ -1,4 +1,5 @@
 import type { PassiveNode } from "./passiveNodes";
+import type { DefensiveStats } from "./types";
 
 /**
  * What an allocated keystone invalidates about the rest of the analysis.
@@ -31,6 +32,8 @@ export interface KeystoneEffects {
   amuletToMinions: boolean;
   /** Plain-language consequences worth showing, whatever else they change. */
   notes: KeystoneNote[];
+  /** Allocated keystones whose effect the stats do not corroborate. */
+  unverified: UnverifiedKeystone[];
 }
 
 export interface KeystoneNote {
@@ -38,10 +41,37 @@ export interface KeystoneNote {
   text: string;
 }
 
+/**
+ * A keystone allocated on the tree whose effect is not visible in the
+ * character's actual stats, so none of its corrections were applied.
+ */
+export interface UnverifiedKeystone {
+  keystone: string;
+  /** What we expected to see, and what we saw instead. */
+  reason: string;
+}
+
 interface KeystoneRule {
-  effects?: Partial<Omit<KeystoneEffects, "notes">>;
+  effects?: Partial<Omit<KeystoneEffects, "notes" | "unverified">>;
   /** Shown to the player as a consequence of having allocated this. */
   note?: string;
+  /**
+   * Confirm the keystone is actually in effect before trusting it.
+   *
+   * A node id appearing in the Path of Building export's allocated list is
+   * NOT proof the keystone is doing anything. A real ladder character was
+   * found with Chaos Inoculation's node allocated in its only active spec
+   * while both poe.ninja and PoB reported 1,823 life and 54% chaos
+   * resistance — the exact numbers the keystone forbids. Applying its
+   * corrections there would have cut 1,823 from the defensive pool,
+   * suppressed useful life upgrades, and claimed immunity to a damage type
+   * the character plainly takes.
+   *
+   * So where a keystone's effect is observable in the stats we already have,
+   * it must be observed. Returning a string means "not corroborated", and
+   * that string explains what was seen instead.
+   */
+  verify?: (stats: DefensiveStats) => string | null;
 }
 
 // Keyed by keystone name. Only keystones that change how another part of this
@@ -51,14 +81,26 @@ const RULES: Record<string, KeystoneRule> = {
   "Chaos Inoculation": {
     effects: { chaosImmune: true, lifeIsNegligible: true },
     note: "Maximum life is 1 and you are immune to chaos damage and bleeding, so chaos resistance is irrelevant and energy shield is your entire pool.",
+    verify: (s) =>
+      s.life > 1
+        ? `maximum life reads ${s.life.toLocaleString()}, but this keystone fixes it at 1`
+        : null,
   },
   "Eldritch Battery": {
     effects: { esNotDefensive: true },
     note: "All energy shield is converted to mana, so it is not absorbing hits — your defensive pool is life and ward only.",
+    verify: (s) =>
+      s.energyShield > 0
+        ? `energy shield reads ${s.energyShield.toLocaleString()}, but this keystone converts all of it to mana`
+        : null,
   },
   "Iron Reflexes": {
     effects: { evasionIsArmour: true },
     note: "All evasion rating is converted to armour, so evasion is not avoiding hits — it is mitigating them.",
+    verify: (s) =>
+      s.evasionRating > 0
+        ? `evasion rating reads ${s.evasionRating.toLocaleString()}, but this keystone converts all of it to armour`
+        : null,
   },
   "Resolute Technique": {
     effects: { neverCrits: true },
@@ -116,20 +158,43 @@ export const NO_KEYSTONE_EFFECTS: KeystoneEffects = {
   fireOnly: false,
   amuletToMinions: false,
   notes: [],
+  unverified: [],
 };
 
-/** Fold every allocated keystone into one set of corrections. */
-export function keystoneEffectsOf(keystones: PassiveNode[]): KeystoneEffects {
-  const out: KeystoneEffects = { ...NO_KEYSTONE_EFFECTS, notes: [] };
+/**
+ * Fold every allocated keystone into one set of corrections, applying a
+ * keystone's effects only when the character's stats corroborate them.
+ */
+export function keystoneEffectsOf(
+  keystones: PassiveNode[],
+  stats?: DefensiveStats
+): KeystoneEffects {
+  const out: KeystoneEffects = {
+    ...NO_KEYSTONE_EFFECTS,
+    notes: [],
+    unverified: [],
+  };
 
   for (const keystone of keystones) {
     const rule = RULES[keystone.n];
     if (!rule) continue;
+
+    const mismatch = rule.verify && stats ? rule.verify(stats) : null;
+    if (mismatch) {
+      // Allocated but not doing what it claims. Neither its corrections nor
+      // its note can be trusted, so record the discrepancy instead — a note
+      // stating "maximum life is 1" beside a life of 1,823 is worse than
+      // silence.
+      out.unverified.push({ keystone: keystone.n, reason: mismatch });
+      continue;
+    }
+
     if (rule.effects) Object.assign(out, rule.effects);
     if (rule.note) out.notes.push({ keystone: keystone.n, text: rule.note });
   }
 
   out.notes.sort((a, b) => a.keystone.localeCompare(b.keystone));
+  out.unverified.sort((a, b) => a.keystone.localeCompare(b.keystone));
   return out;
 }
 
