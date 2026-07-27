@@ -86,6 +86,33 @@ export function PassiveTreeSummary({
             </div>
           )}
 
+          {keystones.unverified.length > 0 && (
+            // Allocated on the tree, but the character's own numbers say it
+            // isn't doing what it claims. Found on a real ladder character
+            // whose Chaos Inoculation node was allocated while both poe.ninja
+            // and Path of Building reported 1,823 life. Applying the
+            // correction there would have been confidently wrong, so it is
+            // reported instead.
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-slate-300">
+                Allocated, but not reflected in your stats
+              </h3>
+              <ul className="space-y-1.5">
+                {keystones.unverified.map((u) => (
+                  <li
+                    key={u.keystone}
+                    className="rounded-md border border-[var(--caution)]/30 bg-[var(--caution)]/[0.05] p-3 text-xs text-amber-50/85"
+                  >
+                    <span className="font-medium">{u.keystone}</span> is
+                    allocated on your tree, but {u.reason}. Nothing in this
+                    analysis assumes it is active — check whether the export is
+                    current, or whether the node is reachable.
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {passives.ascendancy.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-semibold text-slate-300">
