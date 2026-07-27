@@ -1,4 +1,5 @@
 import type { ImportedCharacter } from "./characterImport/types";
+import type { CharacterSnapshot } from "./characterImport/snapshot";
 
 export type SourceDoc = "atlas-tree-fundamentals" | "strategy-guide";
 export type Verification = "confirmed" | "unverified" | "conflicting";
@@ -158,6 +159,13 @@ export interface PersistedState {
   };
   character: {
     pinnedImport?: ImportedCharacter;
+    /**
+     * Compact per-import snapshots, so the page can answer "is what you did
+     * last week working". Kept separate from pinnedImport: a snapshot has no
+     * gear or mods, so a schema change to ImportedCharacter must not discard
+     * a history that is still perfectly readable.
+     */
+    history?: CharacterSnapshot[];
   };
   updatedAt: string;
 }

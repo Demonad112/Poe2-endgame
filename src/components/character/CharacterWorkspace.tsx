@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { SectionTitle } from "@/components/shared/SectionTitle";
 import { Accordion } from "@/components/shared/Accordion";
 import { useCharacterImport } from "@/hooks/useCharacterImport";
@@ -23,6 +23,13 @@ import { SkillsGearPanel } from "./SkillsGearPanel";
 import { LimitsDisclaimer } from "./LimitsDisclaimer";
 import { formatCompact } from "@/lib/characterImport/format";
 import { PanelControls } from "./PanelControls";
+import { ProgressPanel } from "./ProgressPanel";
+import {
+  diffSnapshots,
+  snapshotKey,
+  toSnapshot,
+  type CharacterSnapshot,
+} from "@/lib/characterImport/snapshot";
 import {
   DangerBar,
   NumberReadout,
@@ -59,7 +66,7 @@ function CountBadge({
 }
 
 export function CharacterWorkspace() {
-  const { pinnedImport, setPinnedImport, clearPinnedImport } =
+  const { pinnedImport, history, setPinnedImport, recordSnapshot, clearPinnedImport } =
     useCharacterImport();
   // Only pay for these assets once a character is actually on screen.
   const { table, pending, failed } = useModTiers(Boolean(pinnedImport));
@@ -81,6 +88,8 @@ export function CharacterWorkspace() {
           table={table}
           passiveTable={passiveTable}
           passivesPending={passivesPending}
+          history={history}
+          onSnapshot={recordSnapshot}
           tablePending={pending}
           tableFailed={failed}
           onClear={clearPinnedImport}
@@ -95,6 +104,8 @@ function CharacterAnalysis({
   table,
   passiveTable,
   passivesPending,
+  history,
+  onSnapshot,
   tablePending,
   tableFailed,
   onClear,
@@ -103,12 +114,32 @@ function CharacterAnalysis({
   table: Parameters<typeof analyseCharacter>[1];
   passiveTable: Parameters<typeof analyseCharacter>[2];
   passivesPending: boolean;
+  history: CharacterSnapshot[];
+  onSnapshot: (s: CharacterSnapshot) => void;
   tablePending: boolean;
   tableFailed: boolean;
   onClear: () => void;
 }) {
   const analysis = analyseCharacter(character, table, passiveTable);
   const { pob } = character;
+  const key = snapshotKey(character);
+
+  // Record the character's numbers once per import, and only after the
+  // passive table has settled: keystones can change the defensive pool
+  // (Chaos Inoculation drops life, Eldritch Battery drops energy shield), so
+  // snapshotting early would persist a figure the page never displayed.
+  //
+  // Writing to localStorage is a real side effect, not derived state, so a
+  // useEffect is the right tool. The ref keeps it to one write per import
+  // even though the effect's inputs settle across several renders.
+  const recorded = useRef<string | null>(null);
+  useEffect(() => {
+    if (passivesPending) return;
+    const stamp = `${key}@${character.provenance.fetchedAt}`;
+    if (recorded.current === stamp) return;
+    recorded.current = stamp;
+    onSnapshot(toSnapshot(character, analysis.keystones));
+  });
 
   // Only the three elements have a cap to be under. Chaos has no cap in PoE2 —
   // its shortfall is measured against a judgement-call target — so counting it
@@ -140,6 +171,41 @@ function CharacterAnalysis({
       atRisk: hits.filter(([, v]) => v < best * ONE_SHOT_RATIO).length,
     };
   })();
+
+  // Headline for the collapsed Progress row: how many figures moved since the
+  // previous import, and whether the movement was net helpful.
+  const mySnapshots = history.filter((s) => s.key === key);
+  const progressDiff =
+    mySnapshots.length >= 2
+      ? diffSnapshots(
+          mySnapshots[mySnapshots.length - 2],
+          mySnapshots[mySnapshots.length - 1]
+        )
+      : null;
+  const progressSummary = progressDiff
+    ? `${progressDiff.changes.length} figure${progressDiff.changes.length === 1 ? "" : "s"} moved since your last import`
+    : "Import again after playing to see what moved";
+  const progressInstrument = progressDiff ? (
+    progressDiff.newlyUncapped.length > 0 ? (
+      <StatusChip tone="critical">Dropped below cap</StatusChip>
+    ) : progressDiff.newlyCapped.length > 0 ? (
+      <StatusChip tone="good">Capped</StatusChip>
+    ) : progressDiff.changes.length > 0 ? (
+      <StatusChip
+        tone={
+          progressDiff.changes.filter((c) => c.improved).length >=
+          progressDiff.changes.length / 2
+            ? "good"
+            : "caution"
+        }
+      >
+        {progressDiff.changes.filter((c) => c.improved).length}/
+        {progressDiff.changes.length} up
+      </StatusChip>
+    ) : undefined
+  ) : (
+    <StatusChip>{mySnapshots.length || 0} snapshot{mySnapshots.length === 1 ? "" : "s"}</StatusChip>
+  );
 
   // Declared as data so the presentation can change in one place — swapping
   // these accordions for a tab strip means changing only the renderer below,
@@ -286,6 +352,13 @@ function CharacterAnalysis({
           pending={passivesPending}
         />
       ),
+    },
+    {
+      id: "progress",
+      title: "Progress",
+      summary: progressSummary,
+      instrument: progressInstrument,
+      content: <ProgressPanel history={history} currentKey={key} />,
     },
     {
       id: "skills-gear",
