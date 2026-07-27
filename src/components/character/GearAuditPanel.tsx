@@ -55,12 +55,13 @@ export function GearAuditPanel({
         // a complete answer when it isn't.
         <p className="rounded-md border border-[var(--caution)]/25 bg-[var(--caution)]/[0.05] p-3 text-xs text-amber-50/80">
           {audit.ungradedCount} modifier{audit.ungradedCount === 1 ? "" : "s"}{" "}
-          on your gear could not be graded: the affix table this uses is missing
-          the tier row{audit.ungradedCount === 1 ? "" : "s"}{" "}
-          they sit on, so they are excluded rather than compared against an
-          incomplete ladder.
-          Where that happens, &ldquo;already at the best tier&rdquo; only means
-          the best tier <em>we know about</em>.
+          on your gear {audit.ungradedCount === 1 ? "is" : "are"} not in the
+          affix table, so there is no tier ladder to compare against and{" "}
+          {audit.ungradedCount === 1 ? "it is" : "they are"} excluded. That
+          usually means the table is behind the current patch — for{" "}
+          {audit.ungradedCount === 1 ? "that modifier" : "those modifiers"},
+          &ldquo;already at the best tier&rdquo; only means the best tier{" "}
+          <em>we know about</em>.
         </p>
       )}
 
