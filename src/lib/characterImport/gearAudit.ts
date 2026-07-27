@@ -3,8 +3,7 @@ import { NO_KEYSTONE_EFFECTS, type KeystoneEffects } from "./keystoneEffects";
 import {
   bestRowForIlvl,
   displayTierOf,
-  rowForTier,
-  splitModId,
+  resolveMod,
   type ModTierTable,
 } from "./modTiers";
 
@@ -65,11 +64,11 @@ export interface GearAudit {
   /** Mods that carried a tier we could grade. */
   gradedCount: number;
   /**
-   * Affix-pool mods we could NOT grade, because the extracted tier table has
-   * no row for the tier the mod claims. The table has gaps inside families
-   * (39 of 567 are non-contiguous), so this is a real coverage limit, not a
-   * parsing failure — and it means "already at the best tier" is only true
-   * for the rows we know about.
+   * Affix-pool mods that aren't in the tier table at all, so no ladder exists
+   * to compare them against. Should be rare now that the table is keyed by
+   * mod id rather than a parsed one; a non-zero count means the table is
+   * behind the game, and the UI says so rather than letting an incomplete
+   * answer read as a complete one.
    */
   ungradedCount: number;
   /** Items with affix slots still empty — unspent crafting headroom. */
@@ -99,11 +98,10 @@ function countAffixes(
   let suffixes = 0;
   for (const mod of item.structuredMods ?? []) {
     if (!AFFIX_CATEGORIES.has(mod.category)) continue;
-    const split = splitModId(mod.id);
-    const family = split ? table[split.family] : null;
-    if (!family) return null;
-    if (family.g === "prefix") prefixes += 1;
-    else if (family.g === "suffix") suffixes += 1;
+    const resolved = resolveMod(table, mod.id);
+    if (!resolved) return null;
+    if (resolved.family.g === "prefix") prefixes += 1;
+    else if (resolved.family.g === "suffix") suffixes += 1;
     else return null;
   }
   return { prefixes, suffixes };
@@ -398,21 +396,22 @@ export function auditGear(
 
       // --- Tier headroom ---
       if (!gradeable(mod) || item.itemLevel <= 0) continue;
-      const split = splitModId(mod.id);
-      if (!split) continue;
-      const family = table[split.family];
-      if (!family) continue;
-      const currentRow = rowForTier(family, split.tier);
+      const resolved = resolveMod(table, mod.id);
+      if (!resolved) {
+        // Not in the affix table at all. Counted rather than silently
+        // dropped, so the panel can say how much it did not look at.
+        ungradedCount += 1;
+        continue;
+      }
+      const { family } = resolved;
+      const currentRow = resolved.row;
       const bestRow = bestRowForIlvl(family, item.itemLevel);
-      if (!currentRow || !bestRow) {
-        // The family resolved but the tier is absent from the table, so any
-        // comparison would be against an incomplete ladder. Count it rather
-        // than pretending the mod doesn't exist.
+      if (!bestRow) {
         ungradedCount += 1;
         continue;
       }
       gradedCount += 1;
-      if (bestRow.t <= split.tier) continue;
+      if (bestRow.i <= currentRow.i) continue;
       const currentDisplay = displayTierOf(family, currentRow);
       const bestDisplay = displayTierOf(family, bestRow);
       if (bestDisplay >= currentDisplay) continue;
@@ -431,7 +430,7 @@ export function auditGear(
         itemLevel: item.itemLevel,
         statLabel: labelFor(statId),
         statId,
-        affixName: family.n,
+        affixName: bestRow.a,
         currentTier: currentDisplay,
         currentValue,
         bestTier: bestDisplay,
