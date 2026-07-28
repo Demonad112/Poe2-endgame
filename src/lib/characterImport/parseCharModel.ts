@@ -10,6 +10,7 @@ import type {
 } from "./types";
 import { CHARACTER_SCHEMA_VERSION } from "./types";
 import { estimateEhp } from "./ehpEstimate";
+import { parseBreakdowns } from "./breakdowns";
 import { RESIST_STAT_ID, tierFromModId } from "./resistanceTiers";
 
 // PoE2 ascendancy -> base class. poe.ninja's charModel `class` field carries
@@ -80,6 +81,8 @@ interface RawCharModel {
   equipment?: unknown[];
   skills?: unknown[];
   passiveSelection?: unknown;
+  /** poe.ninja's own stat attribution; decoded by breakdowns.ts. */
+  breakdowns?: unknown;
   defensiveStats?: Record<string, number>;
   pathOfBuildingExport?: string;
 }
@@ -350,6 +353,7 @@ export function normalizeCharacter(
     skills: normalizeSkills(model.skills),
     gear: normalizeGear(model.items ?? model.equipment),
     passivePointsAllocated: countPassivePoints(model.passiveSelection),
+    attribution: parseBreakdowns(model.breakdowns, stats),
     provenance,
   };
 }
