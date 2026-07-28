@@ -2,14 +2,12 @@ import type { ImportedCharacter } from "./types";
 import {
   CHAOS_CRITICAL,
   CHAOS_TARGET,
-  DPS_LOW,
-  DPS_OK,
-  DPS_STRONG,
   ONE_SHOT_RATIO,
   POOL_GOOD,
   POOL_THIN,
   RES_CAP,
 } from "./thresholds";
+import type { LadderStat } from "./ladderClient";
 import {
   effectivePool,
   NO_KEYSTONE_EFFECTS,
@@ -36,7 +34,15 @@ export interface BuildAssessment {
 
 export function assessBuild(
   character: ImportedCharacter,
-  keystones: KeystoneEffects = NO_KEYSTONE_EFFECTS
+  keystones: KeystoneEffects = NO_KEYSTONE_EFFECTS,
+  /**
+   * Observed damage figures to grade against. Omit and the offence half is
+   * left unassessed rather than measured against invented thresholds — the
+   * score rescales, exactly as it already does when there is no PoB export.
+   */
+  ladderDps?: LadderStat | null,
+  /** How the ladder sample is described, e.g. "top 100 Deadeyes". */
+  ladderBasis?: string
 ): BuildAssessment {
   const { stats, pob } = character;
   const { total: pool } = effectivePool(stats, keystones);
@@ -168,27 +174,24 @@ export function assessBuild(
   }
 
   // --- Offense ---
-  // The DPS figure is whatever the character's PoB export was configured to
-  // produce. On real exports that is typically NOT a boss calculation, so a
-  // verdict about pinnacle bosses can't be drawn from it — the wording below
-  // stays about the number itself, and the UI prints the actual config
-  // alongside it (see pobConfig.ts / describePobConfig).
+  // Graded only against numbers we actually observed. Without a ladder sample
+  // there is no defensible threshold, so nothing is claimed about damage.
   const dps = pob?.combinedDps ?? 0;
-  const dpsUnknown = !pob || dps <= 0;
+  const hasDps = Boolean(pob) && dps > 0;
+  const dpsUnknown = !hasDps || !ladderDps;
   const versusBoss = pob?.config?.versusBoss ?? false;
-  if (!dpsUnknown) {
+
+  if (hasDps && ladderDps) {
     const shown = `${Math.round(dps).toLocaleString()} combined DPS`;
     const against = versusBoss ? "against a boss" : "against a non-boss enemy";
-    if (dps >= DPS_STRONG) {
-      strengths.push(`Strong damage — ${shown} ${against}`);
-    } else if (dps < DPS_LOW) {
+    const basis = ladderBasis ?? "the sampled builds";
+    if (dps >= ladderDps.p75) {
+      strengths.push(
+        `Strong damage — ${shown} ${against}, upper quarter of ${basis}`
+      );
+    } else if (dps < ladderDps.p25) {
       weaknesses.push({
-        text: `Low damage for endgame — ${shown} ${against}`,
-        severity: "critical",
-      });
-    } else if (dps < DPS_OK) {
-      weaknesses.push({
-        text: `Modest damage — ${shown} ${against}`,
+        text: `${shown} ${against} — below every quartile of ${basis}, which run ${ladderDps.p25.toLocaleString()} at the 25th percentile`,
         severity: "warning",
       });
     }
@@ -208,11 +211,12 @@ export function assessBuild(
     defence += 0.05;
 
   let offence = 0;
-  if (!dpsUnknown) {
-    if (dps >= DPS_STRONG) offence = 0.5;
-    else if (dps >= DPS_OK) offence = 0.35;
-    else if (dps >= DPS_LOW) offence = 0.2;
-    else offence = 0.05;
+  if (!dpsUnknown && ladderDps) {
+    // Quartiles of the observed sample, not invented cutoffs.
+    if (dps >= ladderDps.p75) offence = 0.5;
+    else if (dps >= ladderDps.median) offence = 0.4;
+    else if (dps >= ladderDps.p25) offence = 0.28;
+    else offence = 0.15;
   }
 
   const raw = dpsUnknown ? defence / 0.5 : defence + offence;
@@ -226,9 +230,10 @@ export function assessBuild(
   } else if (pool < POOL_THIN) {
     note = "Resistances are handled — the thin life/ES pool is the limiting factor.";
   } else if (dpsUnknown) {
-    note =
-      "Scored on defences only — this character had no Path of Building export to read DPS from.";
-  } else if (dps < DPS_OK) {
+    note = hasDps
+      ? "Scored on defences only — no ladder sample was available to judge damage against."
+      : "Scored on defences only — this character had no Path of Building export to read DPS from.";
+  } else if (ladderDps && dps < ladderDps.median) {
     note = versusBoss
       ? "Defences hold up; damage is the weaker half of this build."
       : "Defences hold up; damage is the weaker half — though this export was not configured against a boss.";

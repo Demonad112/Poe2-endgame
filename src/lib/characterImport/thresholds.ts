@@ -25,18 +25,12 @@ export const CHAOS_CRITICAL = 0;
 export const POOL_GOOD = 6000;
 export const POOL_THIN = 4000;
 
-/**
- * Rough endgame DPS bands. Heuristics, not published benchmarks — no
- * authoritative 0.5 community numbers were available when this was written.
- *
- * They are also NOT boss DPS: the figures they grade come from whatever
- * config the character's Path of Building export was saved with, which in
- * practice carries no boss setting at all (see pobConfig.ts). Anything that
- * renders a verdict from these has to say so.
- */
-export const DPS_STRONG = 1_000_000;
-export const DPS_OK = 300_000;
-export const DPS_LOW = 100_000;
+// The invented DPS bands that used to live here (1M / 300k / 100k) are gone.
+// They were three numbers chosen with no evidence, and they drove a verdict
+// the tool presented with more authority than it had earned. Damage is now
+// compared against figures actually observed on the ladder — see
+// ladderClient.ts — and when those aren't available the offence half of the
+// score is simply not assessed rather than guessed at.
 
 /**
  * A max-hit-taken value below this fraction of the character's best is a
