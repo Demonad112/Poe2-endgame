@@ -219,12 +219,50 @@ function structuredModsFrom(itemData: Record<string, unknown>): StructuredMod[] 
   return out;
 }
 
+/**
+ * Runes are the one modifier source poe.ninja ships as display text only —
+ * they never appear in the structured `mods` object (0 of 270 rune-bearing
+ * items across a 44-character sample carried a `mods.rune` entry), so
+ * anything reading only `mods` cannot see them.
+ *
+ * That was a live wrong answer, not a theoretical gap: a test character's
+ * body armour carried a "+18% to Cold Resistance" rune on top of its +26%
+ * explicit, and the resistance panel reported "101% from gear" while
+ * poe.ninja's own attribution said 119 — the panel's figure could not
+ * reconcile with the 74% on the character sheet, and the attribution's could.
+ *
+ * Parsed from text rather than skipped. There is no mod id, so no tier can be
+ * derived — a rune has no tier ladder to be upgraded along, which is exactly
+ * what `tier: null` already means everywhere else.
+ */
+const RESIST_TEXT_RE =
+  /\+(\d+)%\s+to\s+\[Resistances\|(Fire|Cold|Lightning|Chaos)\s+Resistance\]/i;
+
+function resistancesFromRunes(itemData: Record<string, unknown>): ResistanceGrant[] {
+  const lines = itemData.runeMods;
+  if (!Array.isArray(lines)) return [];
+  const out: ResistanceGrant[] = [];
+  for (const line of lines) {
+    if (typeof line !== "string") continue;
+    const match = RESIST_TEXT_RE.exec(line);
+    if (!match) continue;
+    out.push({
+      type: match[2].toLowerCase() as ResistanceGrant["type"],
+      value: Number(match[1]),
+      tier: null,
+      modId: "",
+      category: "rune",
+    });
+  }
+  return out;
+}
+
 // The `mods` object carries the structured form the display strings lack:
 // a mod id (whose numeric suffix is its tier) and the stat values it grants.
 // That's what makes real tier analysis possible.
 function resistancesFrom(itemData: Record<string, unknown>): ResistanceGrant[] {
   const modsObj = asRecord(itemData.mods);
-  const out: ResistanceGrant[] = [];
+  const out: ResistanceGrant[] = resistancesFromRunes(itemData);
   for (const [category, arr] of Object.entries(modsObj)) {
     if (!Array.isArray(arr)) continue;
     for (const entry of arr) {
