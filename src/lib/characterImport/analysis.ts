@@ -20,6 +20,7 @@ import {
   CHAOS_CRITICAL,
   ONE_SHOT_RATIO,
   POOL_THIN,
+  RES_CAP,
   type ResistanceKey,
 } from "./thresholds";
 import { bandFor, BAND_LABEL, type LadderSummary } from "./ladderClient";
@@ -128,6 +129,9 @@ const UPGRADE_BASE = {
   mitigation: 26,
   utility: 8,
 } as const;
+
+/** The three resistances that have a cap to fall below. */
+const IS_CAPPED_RE = /^(fire|cold|lightning)Resistance$/;
 
 const LIFE_ES_RE = /maximum_life|energy_shield/;
 const MITIGATION_RE = /evasion|armour|physical_damage_reduction|stun_threshold/;
@@ -510,14 +514,22 @@ export function analyseCharacter(
     });
   }
 
+  actions.sort((a, b) => b.score - a.score);
+
   // --- What each proposed change would cost --------------------------------
   // The gear audit used to recommend re-rolling an item without knowing what
   // that item was holding up, and the resistance panel had no idea the two
-  // were connected. This is the reconciliation: any action naming an item
+  // were connected. This is the reconciliation: an action naming an item
   // carries what that item currently provides, so "upgrade this ring" cannot
   // silently mean "uncap your fire resistance".
+  //
+  // Runs after the sort, and only once per item: two upgrades on the same
+  // helmet were repeating an identical five-stat paragraph verbatim, which
+  // buries the one case that matters under text the reader has already read.
+  // The highest-ranked action for an item carries the caveat.
+  const captioned = new Set<string>();
   for (const action of actions) {
-    if (!action.itemName) continue;
+    if (!action.itemName || captioned.has(action.itemName)) continue;
     const item = itemAttribution.find((i) => i.itemName === action.itemName);
     if (!item || item.contributions.length === 0) continue;
 
@@ -529,22 +541,27 @@ export function analyseCharacter(
             ? `${c.flat}${c.increased > 0 ? ` and ${c.increased}%` : ""}`
             : `${c.increased}%`;
         const stat = STAT_LABEL[c.stat];
-        // For a capped resistance, what matters is whether losing this roll
-        // drops the character below the cap — not the raw number.
+        // For a capped resistance the raw number is not the point — whether
+        // losing it puts you under the cap is. Asked of every capped
+        // resistance, not just over-capped ones: a resistance already below
+        // cap is the case where losing a roll hurts most, and keying this on
+        // overcap > 0 meant those said nothing at all.
         const attrib = attribution.find((a) => a.stat === c.stat);
-        if (attrib && attrib.overcap > 0 && c.flat > 0) {
-          const uncaps = c.flat > attrib.overcap;
-          return `${amount} ${stat}${uncaps ? ` (losing it drops you to ${c.without}%, below cap)` : " (covered by your overcap)"}`;
+        const capped = attrib && attrib.stat !== "chaosResistance" && IS_CAPPED_RE.test(attrib.stat);
+        if (attrib && capped && c.flat > 0) {
+          return c.without < RES_CAP
+            ? `${amount} ${stat} (losing it drops you to ${c.without}%, below cap)`
+            : `${amount} ${stat} (covered by your overcap)`;
         }
         return `${amount} ${stat}`;
       });
 
     if (parts.length > 0) {
       action.holding = `This item currently provides ${parts.join(", ")}.`;
+      captioned.add(action.itemName);
     }
   }
 
-  actions.sort((a, b) => b.score - a.score);
 
   return {
     assessment,
