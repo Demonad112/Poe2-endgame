@@ -23,6 +23,12 @@ import {
   type ResistanceKey,
 } from "./thresholds";
 import { bandFor, BAND_LABEL, type LadderSummary } from "./ladderClient";
+import {
+  attributionByItem,
+  STAT_LABEL,
+  type ItemAttribution,
+  type StatAttribution,
+} from "./breakdowns";
 
 /**
  * One ranked pass over everything we know about a character.
@@ -55,6 +61,12 @@ export interface Action {
   score: number;
   itemName?: string;
   itemSlot?: string;
+  /**
+   * What the named item is currently holding up, when replacing or re-rolling
+   * it would cost something. Present only where poe.ninja's attribution
+   * supports the claim — see breakdowns.ts.
+   */
+  holding?: string;
   /** Which panel holds the supporting detail, for "see below" links. */
   evidence: string;
 }
@@ -74,6 +86,10 @@ export interface CharacterAnalysis {
   dps: DpsBreakdown | null;
   /** Top-of-ladder reference figures, when the proxy supplied them. */
   ladder: LadderSummary | null;
+  /** Where each defensive stat comes from. Empty when unavailable. */
+  attribution: StatAttribution[];
+  /** The same data pivoted by equipped item. */
+  itemAttribution: ItemAttribution[];
   /** Ranked, deduplicated, conflict-resolved. */
   actions: Action[];
   /** True when the tier table is still pending, so gear actions may be missing. */
@@ -94,6 +110,7 @@ export interface CharacterAnalysis {
 
 const SCORE = {
   uncappedElemental: 90,
+  overcap: 18,
   oneShotRisk: 84,
   negativeChaos: 80,
   thinPool: 70,
@@ -208,6 +225,12 @@ export function analyseCharacter(
   const assessment = assessBuild(character, keystones, ladder?.dps, ladderBasis);
   const resistances = analyseResistances(character);
   const gear = table ? auditGear(character, table, keystones) : null;
+
+  // What each equipped item is actually providing. Drives both the overcap
+  // opportunities below and the "you would lose this" caveat attached to every
+  // action that proposes changing an item.
+  const attribution = character.attribution ?? [];
+  const itemAttribution = attributionByItem(attribution, character.gear);
 
   const shortfalls = new Map<ResistanceKey, number>();
   const cappedOrOver = new Set<ResistanceKey>();
@@ -468,6 +491,59 @@ export function analyseCharacter(
     }
   }
 
+  // --- Resistance carried over the cap -------------------------------------
+  // Overcap is real insurance against map mods that cut resistances, so this
+  // is never framed as waste. It is stated as a tradeable surplus, and only
+  // once it is large enough that trading some away could not uncap the
+  // character on an ordinary map.
+  for (const entry of attribution) {
+    if (entry.overcap < 10 || !entry.matchesSheet) continue;
+    if (entry.stat === "chaosResistance") continue; // no cap to be over
+    actions.push({
+      id: `overcap-${entry.stat}`,
+      title: `${STAT_LABEL[entry.stat]} is ${entry.overcap}% over cap`,
+      detail: `Your modifiers total ${entry.total + entry.overcap}% against a ${entry.total}% cap. The surplus does nothing until a map mod cuts your resistances, at which point it is exactly what keeps you capped.`,
+      why: "Worth knowing before you re-roll: this is the one place you can give up a resistance roll for something else and lose nothing on an unmodified map.",
+      severity: "opportunity",
+      score: SCORE.overcap,
+      evidence: "Where it comes from",
+    });
+  }
+
+  // --- What each proposed change would cost --------------------------------
+  // The gear audit used to recommend re-rolling an item without knowing what
+  // that item was holding up, and the resistance panel had no idea the two
+  // were connected. This is the reconciliation: any action naming an item
+  // carries what that item currently provides, so "upgrade this ring" cannot
+  // silently mean "uncap your fire resistance".
+  for (const action of actions) {
+    if (!action.itemName) continue;
+    const item = itemAttribution.find((i) => i.itemName === action.itemName);
+    if (!item || item.contributions.length === 0) continue;
+
+    const parts = item.contributions
+      .filter((c) => c.flat > 0 || c.increased > 0)
+      .map((c) => {
+        const amount =
+          c.flat > 0
+            ? `${c.flat}${c.increased > 0 ? ` and ${c.increased}%` : ""}`
+            : `${c.increased}%`;
+        const stat = STAT_LABEL[c.stat];
+        // For a capped resistance, what matters is whether losing this roll
+        // drops the character below the cap — not the raw number.
+        const attrib = attribution.find((a) => a.stat === c.stat);
+        if (attrib && attrib.overcap > 0 && c.flat > 0) {
+          const uncaps = c.flat > attrib.overcap;
+          return `${amount} ${stat}${uncaps ? ` (losing it drops you to ${c.without}%, below cap)` : " (covered by your overcap)"}`;
+        }
+        return `${amount} ${stat}`;
+      });
+
+    if (parts.length > 0) {
+      action.holding = `This item currently provides ${parts.join(", ")}.`;
+    }
+  }
+
   actions.sort((a, b) => b.score - a.score);
 
   return {
@@ -479,6 +555,8 @@ export function analyseCharacter(
     pool,
     dps: dps_,
     ladder,
+    attribution,
+    itemAttribution,
     actions,
     gearPending: table === null,
   };

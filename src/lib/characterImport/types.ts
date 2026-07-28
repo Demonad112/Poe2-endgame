@@ -1,3 +1,7 @@
+// Type-only, so the cycle with breakdowns.ts (which needs DefensiveStats and
+// GearItem from here) is erased at compile time rather than existing at all.
+import type { StatAttribution } from "./breakdowns";
+
 export type ImportMethod = "live-fetch" | "pasted-json";
 
 // Provenance for a live, user-specific import — distinct from SourceRef
@@ -139,8 +143,11 @@ export interface PobStats {
  *    renders alongside DPS, so a stale one must not be revived.
  * 5: GearItem gained `corrupted`. Absent, it reads as undefined and a
  *    corrupted item would be offered craft advice it cannot accept.
+ * 6: Gained `attribution`. A v5 character has none, and the gear advice now
+ *    states what an item is holding up before suggesting it be replaced —
+ *    advice that silently loses its caveat is the failure this guards against.
  */
-export const CHARACTER_SCHEMA_VERSION = 5;
+export const CHARACTER_SCHEMA_VERSION = 6;
 
 export interface ImportedCharacter {
   schemaVersion: number;
@@ -160,5 +167,11 @@ export interface ImportedCharacter {
   passivePointsAllocated: number;
   /** Present when the character had a decodable Path of Building export. */
   pob?: PobStats;
+  /**
+   * Where each defensive stat comes from, decoded from poe.ninja's own
+   * `breakdowns`. Empty when the payload lacked it or the figures failed
+   * validation — see breakdowns.ts.
+   */
+  attribution: StatAttribution[];
   provenance: ImportProvenance;
 }

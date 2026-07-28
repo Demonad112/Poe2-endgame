@@ -21,6 +21,7 @@ import { GearAuditPanel } from "./GearAuditPanel";
 import { BuildScoreCard } from "./BuildScoreCard";
 import { PassiveTreeSummary } from "./PassiveTreeSummary";
 import { SkillsGearPanel } from "./SkillsGearPanel";
+import { AttributionPanel } from "./AttributionPanel";
 import { LimitsDisclaimer } from "./LimitsDisclaimer";
 import { formatCompact } from "@/lib/characterImport/format";
 import { PanelControls } from "./PanelControls";
@@ -212,6 +213,34 @@ function CharacterAnalysis({
     <StatusChip>{mySnapshots.length || 0} snapshot{mySnapshots.length === 1 ? "" : "s"}</StatusChip>
   );
 
+  // Headline figures for the attribution accordion's collapsed summary: the
+  // share of the defensive pool that equipment is responsible for, and how
+  // many resistances are carrying surplus over the cap.
+  //
+  // The share is of the BASE value, before percentage increases multiply it —
+  // which is also the share of the final number, since the increases scale
+  // every flat source alike. It is worded as "base" anyway, so a build whose
+  // energy shield is entirely gear-supplied but tree-multiplied doesn't read
+  // as though the tree contributes nothing.
+  const attributed = analysis.attribution.filter((a) => a.matchesSheet);
+  const poolAttribution = attributed.filter(
+    (a) => a.stat === "life" || a.stat === "energyShield"
+  );
+  const poolFromGear = poolAttribution.reduce(
+    (sum, entry) =>
+      sum +
+      entry.contributions
+        .filter((c) => c.kind === "flat" && c.sourceKind === "item")
+        .reduce((inner, c) => inner + c.value, 0),
+    0
+  );
+  const poolBase = poolAttribution.reduce((sum, entry) => sum + entry.base, 0);
+  const gearShare =
+    poolBase > 0 ? Math.round((poolFromGear / poolBase) * 100) : null;
+  const overcapped = attributed.filter(
+    (a) => a.overcap > 0 && a.stat !== "chaosResistance"
+  );
+
   // Declared as data so the presentation can change in one place — swapping
   // these accordions for a tab strip means changing only the renderer below,
   // not how any panel is built.
@@ -276,6 +305,38 @@ function CharacterAnalysis({
       instrument: <ResistancePips statuses={analysis.resistances.statuses} />,
       content: <DefenseStatsPanel character={character} />,
     },
+    ...(attributed.length > 0
+      ? [
+          {
+            id: "attribution",
+            title: "Where it comes from",
+            summary: [
+              gearShare !== null
+                ? `Equipment supplies ${gearShare}% of your base life and energy shield`
+                : null,
+              overcapped.length > 0
+                ? `${overcapped.length} resistance${overcapped.length === 1 ? "" : "s"} over cap`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            badge:
+              overcapped.length > 0 ? (
+                <CountBadge
+                  n={overcapped.length}
+                  tone="muted"
+                  suffix="over cap"
+                />
+              ) : undefined,
+            content: (
+              <AttributionPanel
+                attribution={analysis.attribution}
+                itemAttribution={analysis.itemAttribution}
+              />
+            ),
+          },
+        ]
+      : []),
     ...(pob
       ? [
           {

@@ -79,6 +79,15 @@ export function FixNextPanel({
                   <p className="mt-1.5 text-sm leading-relaxed text-slate-300">
                     {action.detail}
                   </p>
+                  {action.holding && (
+                    // The cost of taking the advice, stated next to the
+                    // advice. Without this the gear audit will happily
+                    // recommend re-rolling the ring that is holding a
+                    // resistance at cap.
+                    <p className="mt-1.5 border-l-2 border-[var(--caution)]/50 pl-2 text-xs leading-relaxed text-slate-400">
+                      {action.holding}
+                    </p>
+                  )}
                   <p className="mt-1 text-xs leading-relaxed text-slate-500">
                     {action.why}
                   </p>
